@@ -19,11 +19,16 @@ function SignInForm() {
     setIsLoading(true);
 
     try {
-      await signIn('email', {
+      const result = await signIn('resend', {
         email,
         redirect: false,
       });
-      setEmailSent(true);
+      console.log('Sign-in result:', result);
+      if (result?.error) {
+        console.error('Sign-in error:', result.error);
+      } else {
+        setEmailSent(true);
+      }
     } catch (error) {
       console.error('Sign-in error:', error);
     } finally {
