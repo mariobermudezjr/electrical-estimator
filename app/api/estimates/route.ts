@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     const parsed = createEstimateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.errors },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       );
     }

@@ -46,7 +46,7 @@ export async function PATCH(
     const parsed = updateEstimateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.errors },
+        { error: 'Validation failed', details: parsed.error.issues },
         { status: 400 }
       );
     }
