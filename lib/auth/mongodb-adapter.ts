@@ -1,6 +1,6 @@
 import type { Adapter, AdapterUser, AdapterAccount, AdapterSession, VerificationToken } from 'next-auth/adapters';
 import { ObjectId } from 'mongodb';
-import connectDB from '@/lib/db/connection';
+import connectDB from '@/lib/db/mongodb';
 import User from '@/lib/db/models/User';
 import Account from '@/lib/db/models/Account';
 import VerificationTokenModel from '@/lib/db/models/VerificationToken';
