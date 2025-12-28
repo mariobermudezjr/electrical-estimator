@@ -4,7 +4,7 @@ import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 
 interface SignOutButtonProps {
-  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  variant?: 'default' | 'secondary' | 'success' | 'danger' | 'outline' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
 }
