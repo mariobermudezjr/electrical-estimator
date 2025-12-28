@@ -286,6 +286,11 @@ export default function NewEstimatePage() {
               />
             )}
 
+            {/* Bill of Quantity */}
+            <div className="mt-6 mb-4">
+              <h3 className="text-sm font-medium text-text-secondary">Bill of Quantity</h3>
+            </div>
+
             {/* Labor */}
             <Card>
               <CardHeader>

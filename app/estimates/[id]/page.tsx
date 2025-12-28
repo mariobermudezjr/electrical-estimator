@@ -161,6 +161,7 @@ export default function EstimateViewPage() {
               <CardDescription>Detailed cost analysis</CardDescription>
             </CardHeader>
             <CardContent>
+              <h3 className="text-sm font-medium text-text-secondary mb-4">Bill of Quantity</h3>
               {/* Labor */}
               <div className="space-y-4">
                 <div>
