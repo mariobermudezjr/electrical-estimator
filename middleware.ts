@@ -1,9 +1,14 @@
-import { auth } from '@/lib/auth/auth';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { auth } from '@/lib/auth/auth';
 
-export default auth((req) => {
+// Force Node.js runtime for middleware
+export const runtime = 'nodejs';
+
+export default async function middleware(req: NextRequest) {
+  const session = await auth();
   const { nextUrl } = req;
-  const isAuthenticated = !!req.auth;
+  const isAuthenticated = !!session;
 
   // Public paths that don't require authentication
   const publicPaths = ['/auth/signin', '/auth/verify-request'];
@@ -22,7 +27,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next();
-});
+}
 
 export const config = {
   matcher: [
