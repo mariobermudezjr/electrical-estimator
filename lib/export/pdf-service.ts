@@ -109,7 +109,7 @@ export function generateEstimatePDF(
 
   // Summary rows
   tableData.push(['', '', 'Subtotal:', `$${estimate.pricing.subtotal.toFixed(2)}`]);
-  tableData.push(['', '', `Markup (${estimate.pricing.markupPercentage}%):`, `$${estimate.pricing.markupAmount.toFixed(2)}`]);
+  tableData.push(['', '', `Overhead and Contractor's fee (${estimate.pricing.markupPercentage}%):`, `$${estimate.pricing.markupAmount.toFixed(2)}`]);
   tableData.push(['', '', 'TOTAL:', `$${estimate.pricing.total.toFixed(2)}`]);
 
   autoTable(doc, {
