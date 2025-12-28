@@ -75,11 +75,11 @@ const ScopeTemplateSchema = new Schema<IScopeTemplate>(
     timestamps: true,
     toJSON: {
       transform: (doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
-        delete ret.__v;
-        delete ret.userId;
-        return ret;
+        const { _id, __v, userId, ...rest } = ret;
+        return {
+          id: _id.toString(),
+          ...rest
+        };
       }
     }
   }

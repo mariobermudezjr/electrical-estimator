@@ -71,10 +71,8 @@ const SettingsSchema = new Schema<ISettings>(
     timestamps: true,
     toJSON: {
       transform: (doc, ret) => {
-        delete ret._id;
-        delete ret.__v;
-        delete ret.userId; // Don't expose userId in JSON responses
-        return ret;
+        const { _id, __v, userId, ...rest } = ret;
+        return rest;
       }
     }
   }
