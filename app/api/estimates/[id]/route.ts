@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { updateEstimateSchema } from '@/lib/validation/schemas';
-
-// Temporary hardcoded userId while we fix NextAuth v5 beta issues
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // GET /api/estimates/[id] - Get single estimate
 export async function GET(
@@ -12,12 +10,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
     const { id } = await params;
 
     const estimate = await Estimate.findOne({
       _id: id,
-      userId: TEMP_USER_ID,
+      userId,
     });
 
     if (!estimate) {
@@ -40,6 +39,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     // Validate input
@@ -57,7 +57,7 @@ export async function PATCH(
     const estimate = await Estimate.findOneAndUpdate(
       {
         _id: id,
-        userId: TEMP_USER_ID,
+        userId,
       },
       { $set: parsed.data },
       { new: true, runValidators: true }
@@ -83,12 +83,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
     const { id } = await params;
 
     const estimate = await Estimate.findOneAndDelete({
       _id: id,
-      userId: TEMP_USER_ID,
+      userId,
     });
 
     if (!estimate) {

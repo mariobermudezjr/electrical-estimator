@@ -2,16 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { createEstimateSchema } from '@/lib/validation/schemas';
-
-// Temporary hardcoded userId while we fix NextAuth v5 beta issues
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // GET /api/estimates - List all user's estimates
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
 
-    const estimates = await Estimate.find({ userId: TEMP_USER_ID })
+    const estimates = await Estimate.find({ userId })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -35,6 +34,7 @@ export async function GET(request: NextRequest) {
 // POST /api/estimates - Create new estimate
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     // Validate input
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const estimate = await Estimate.create({
       ...parsed.data,
-      userId: TEMP_USER_ID,
+      userId,
     });
 
     return NextResponse.json(

@@ -3,8 +3,7 @@ import connectDB from '@/lib/db/mongodb';
 import ScopeTemplate from '@/lib/db/models/ScopeTemplate';
 import { updateTemplateSchema } from '@/lib/validation/schemas';
 import mongoose from 'mongoose';
-
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // GET /api/templates/[id] - Get single template
 export async function GET(
@@ -12,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
     const { id } = await params;
 
@@ -24,7 +24,7 @@ export async function GET(
 
     const template = await ScopeTemplate.findOne({
       _id: id,
-      userId: TEMP_USER_ID,
+      userId,
     });
 
     if (!template) {
@@ -50,6 +50,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     const parsed = updateTemplateSchema.safeParse(body);
@@ -64,7 +65,7 @@ export async function PATCH(
     const { id } = await params;
 
     const template = await ScopeTemplate.findOneAndUpdate(
-      { _id: id, userId: TEMP_USER_ID },
+      { _id: id, userId },
       { $set: parsed.data },
       { new: true, runValidators: true }
     );
@@ -92,6 +93,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
     const { id } = await params;
 
@@ -101,7 +103,7 @@ export async function DELETE(
     if (hardDelete) {
       const result = await ScopeTemplate.deleteOne({
         _id: id,
-        userId: TEMP_USER_ID,
+        userId,
       });
 
       if (result.deletedCount === 0) {
@@ -113,7 +115,7 @@ export async function DELETE(
     } else {
       // Soft delete
       const template = await ScopeTemplate.findOneAndUpdate(
-        { _id: id, userId: TEMP_USER_ID },
+        { _id: id, userId },
         { $set: { isActive: false } },
         { new: true }
       );

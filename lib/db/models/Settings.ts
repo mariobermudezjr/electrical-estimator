@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 // Settings interface without API keys (stored server-side only)
 export interface ISettings extends Document {
-  userId: string; // Changed to string temporarily for mock auth
+  userId: mongoose.Types.ObjectId | string;
   companyName: string;
   companyEmail?: string;
   companyPhone?: string;
@@ -18,9 +18,8 @@ export interface ISettings extends Document {
 const SettingsSchema = new Schema<ISettings>(
   {
     userId: {
-      type: String, // Changed to String temporarily for mock auth
-      // type: Schema.Types.ObjectId,
-      // ref: 'User',
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
       unique: true,
       index: true

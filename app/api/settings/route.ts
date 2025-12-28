@@ -2,21 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Settings from '@/lib/db/models/Settings';
 import { settingsSchema } from '@/lib/validation/schemas';
-
-// Temporary hardcoded userId while we fix NextAuth v5 beta issues
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // GET /api/settings - Get user settings (creates default if not exists)
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
 
-    let settings = await Settings.findOne({ userId: TEMP_USER_ID });
+    let settings = await Settings.findOne({ userId });
 
     // Create default settings if they don't exist
     if (!settings) {
       settings = await Settings.create({
-        userId: TEMP_USER_ID,
+        userId,
         companyName: 'My Electrical Company',
         defaultHourlyRate: 75,
         defaultMarkupPercentage: 20,
@@ -38,6 +37,7 @@ export async function GET(request: NextRequest) {
 // PUT /api/settings - Update settings
 export async function PUT(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     // Validate input
@@ -52,7 +52,7 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const settings = await Settings.findOneAndUpdate(
-      { userId: TEMP_USER_ID },
+      { userId },
       { $set: parsed.data },
       { new: true, upsert: true, runValidators: true }
     );

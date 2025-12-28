@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { syncEstimatesSchema } from '@/lib/validation/schemas';
-
-// Temporary hardcoded userId while we fix NextAuth v5 beta issues
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // POST /api/estimates/sync - Bulk import estimates from localStorage
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     // Validate input
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
       try {
         // Check if estimate already exists (by matching key fields)
         const existing = await Estimate.findOne({
-          userId: TEMP_USER_ID,
+          userId,
           clientName: estimateData.clientName,
           projectAddress: estimateData.projectAddress,
         });
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
         // Create new estimate
         await Estimate.create({
           ...estimateData,
-          userId: TEMP_USER_ID,
+          userId,
         });
 
         results.imported++;

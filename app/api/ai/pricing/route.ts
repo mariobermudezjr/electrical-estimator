@@ -7,9 +7,7 @@ import { WorkType, AIPricingData } from '@/types/estimate';
 import Settings from '@/lib/db/models/Settings';
 import Estimate from '@/lib/db/models/Estimate';
 import connectDB from '@/lib/db/mongodb';
-
-// Temporary hardcoded userId while we fix NextAuth v5 beta issues
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // Parse AI response
 function parseAIResponse(response: string): AIPricingData {
@@ -100,6 +98,7 @@ async function callAnthropic(prompt: string): Promise<string> {
 // POST /api/ai/pricing - Research pricing (server-side)
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     // Validate input
@@ -117,7 +116,7 @@ export async function POST(request: NextRequest) {
     let aiProvider: 'openai' | 'anthropic' = provider || 'openai';
     if (!provider) {
       await connectDB();
-      const settings = await Settings.findOne({ userId: TEMP_USER_ID });
+      const settings = await Settings.findOne({ userId });
       if (settings?.preferredAIProvider) {
         aiProvider = settings.preferredAIProvider;
       }
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
       const estimate = await Estimate.findOneAndUpdate(
         {
           _id: estimateId,
-          userId: TEMP_USER_ID,
+          userId,
         },
         { $set: { aiPricing: pricingData } },
         { new: true }

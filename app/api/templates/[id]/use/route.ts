@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import ScopeTemplate from '@/lib/db/models/ScopeTemplate';
-
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // POST /api/templates/[id]/use - Increment usage counter
 export async function POST(
@@ -10,11 +9,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
     const { id } = await params;
 
     const template = await ScopeTemplate.findOneAndUpdate(
-      { _id: id, userId: TEMP_USER_ID, isActive: true },
+      { _id: id, userId, isActive: true },
       { $inc: { usageCount: 1 } },
       { new: true }
     );

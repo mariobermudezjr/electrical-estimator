@@ -3,12 +3,12 @@ import connectDB from '@/lib/db/mongodb';
 import ScopeTemplate from '@/lib/db/models/ScopeTemplate';
 import { createTemplateSchema } from '@/lib/validation/schemas';
 import { WorkType } from '@/types/estimate';
-
-const TEMP_USER_ID = 'temp-user-id';
+import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
 // GET /api/templates - List all templates with optional filtering
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     await connectDB();
 
     const { searchParams } = new URL(request.url);
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt'; // createdAt | usageCount | name
 
     // Build query
-    const query: any = { userId: TEMP_USER_ID };
+    const query: any = { userId };
     if (activeOnly) query.isActive = true;
     if (workType) query.workTypes = workType;
 
@@ -55,6 +55,7 @@ export async function GET(request: NextRequest) {
 // POST /api/templates - Create new template
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getAuthenticatedUser();
     const body = await request.json();
 
     const parsed = createTemplateSchema.safeParse(body);
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     const template = await ScopeTemplate.create({
       ...parsed.data,
-      userId: TEMP_USER_ID,
+      userId,
     });
 
     return NextResponse.json(

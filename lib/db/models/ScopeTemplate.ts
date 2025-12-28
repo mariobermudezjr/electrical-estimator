@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 import { WorkType } from '@/types/estimate';
 
 export interface IScopeTemplate extends Document {
-  userId: string;
+  userId: mongoose.Types.ObjectId | string;
   name: string;
   description?: string;
   workTypes: WorkType[];
@@ -23,7 +23,8 @@ export interface IScopeTemplate extends Document {
 const ScopeTemplateSchema = new Schema<IScopeTemplate>(
   {
     userId: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
       index: true
     },

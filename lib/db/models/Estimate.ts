@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 import { Estimate as EstimateType, WorkType } from '@/types/estimate';
 
 export interface IEstimate extends Omit<EstimateType, 'id' | 'createdAt' | 'updatedAt'>, Document {
-  userId: string; // Changed to string temporarily for mock auth
+  userId: mongoose.Types.ObjectId | string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,9 +19,8 @@ const LineItemSchema = new Schema({
 const EstimateSchema = new Schema<IEstimate>(
   {
     userId: {
-      type: String, // Changed to String temporarily for mock auth
-      // type: Schema.Types.ObjectId,
-      // ref: 'User',
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
       index: true
     },
