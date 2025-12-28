@@ -45,7 +45,7 @@ export function generateEstimatePDF(
   doc.setFontSize(10);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, 150, 28);
-  doc.text(`Status: ${estimate.status.toUpperCase()}`, 150, 33);
+  doc.text('Status: PRELIMINARY', 150, 33);
 
   // Client info section
   doc.setFontSize(12);
