@@ -1,13 +1,13 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-export default function SignInPage() {
+function SignInForm() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -162,5 +162,28 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-background-primary">
+          <div className="w-full max-w-md">
+            <div className="bg-background-secondary rounded-lg shadow-lg p-8">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-text-primary mb-2">
+                  Electrical Estimates
+                </h1>
+                <p className="text-text-secondary">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 }
