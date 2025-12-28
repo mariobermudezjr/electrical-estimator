@@ -10,9 +10,9 @@ export function generateEstimatePDF(
   const doc = new jsPDF();
 
   // Colors
-  const primaryColor = [59, 130, 246]; // Blue
-  const darkColor = [10, 14, 26];
-  const grayColor = [155, 168, 192];
+  const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
+  const darkColor: [number, number, number] = [10, 14, 26];
+  const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
   doc.setFontSize(24);
