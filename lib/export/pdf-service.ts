@@ -9,6 +9,12 @@ export function generateEstimatePDF(
 ): Blob {
   const doc = new jsPDF();
 
+  // Layout constants
+  const pageWidth = doc.internal.pageSize.width;
+  const leftMargin = 20;
+  const rightMargin = 20;
+  const contentWidth = pageWidth - leftMargin - rightMargin;
+
   // Colors
   const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
   const darkColor: [number, number, number] = [10, 14, 26];
@@ -65,18 +71,18 @@ export function generateEstimatePDF(
 
   // Scope of work
   doc.setFontSize(12);
-  doc.text('SCOPE OF WORK', 20, 116);
+  doc.text('SCOPE OF WORK', leftMargin, 116);
 
   doc.setFontSize(10);
-  const splitScope = doc.splitTextToSize(estimate.scopeOfWork, 170);
-  doc.text(splitScope, 20, 124);
+  const splitScope = doc.splitTextToSize(estimate.scopeOfWork, contentWidth);
+  doc.text(splitScope, leftMargin, 124, { align: 'justify', maxWidth: contentWidth });
 
   // Bill of Quantity section
-  const billOfQuantityY = 124 + (splitScope.length * 5) + 10;
+  const billOfQuantityY = 124 + (splitScope.length * 5) + 6;
 
   doc.setFontSize(12);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.text('BILL OF QUANTITY', 20, billOfQuantityY);
+  doc.text('BILL OF QUANTITY', leftMargin, billOfQuantityY);
 
   // Pricing table
   const startY = billOfQuantityY + 8;
@@ -108,6 +114,7 @@ export function generateEstimatePDF(
 
   autoTable(doc, {
     startY,
+    margin: { left: leftMargin, right: rightMargin },
     head: [['Description', 'Quantity', 'Rate', 'Amount']],
     body: tableData,
     theme: 'grid',
