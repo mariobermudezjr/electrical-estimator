@@ -148,8 +148,14 @@ export function generateEstimatePDF(
   const pageHeight = doc.internal.pageSize.height;
   doc.setFontSize(8);
   doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
-  doc.text('Thank you for your business!', 105, pageHeight - 15, { align: 'center' });
-  doc.text('This estimate is valid for 30 days from the date above.', 105, pageHeight - 10, { align: 'center' });
+  doc.text('Thank you for your business!', 105, pageHeight - 20, { align: 'center' });
+  doc.text('This estimate is valid for 30 days from the date above.', 105, pageHeight - 15, { align: 'center' });
+
+  // Disclaimer
+  doc.setFontSize(7);
+  const disclaimer = 'This cost estimate is provided for budget purposes only. Final pricing is subject to finalized scope, site conditions, and official quotation.';
+  const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
+  doc.text(splitDisclaimer, 105, pageHeight - 10, { align: 'center', maxWidth: contentWidth });
 
   return doc.output('blob');
 }
