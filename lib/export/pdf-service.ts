@@ -71,8 +71,15 @@ export function generateEstimatePDF(
   const splitScope = doc.splitTextToSize(estimate.scopeOfWork, 170);
   doc.text(splitScope, 20, 124);
 
+  // Bill of Quantity section
+  const billOfQuantityY = 124 + (splitScope.length * 5) + 10;
+
+  doc.setFontSize(12);
+  doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  doc.text('BILL OF QUANTITY', 20, billOfQuantityY);
+
   // Pricing table
-  const startY = 124 + (splitScope.length * 5) + 10;
+  const startY = billOfQuantityY + 8;
 
   // Labor row
   const tableData: any[] = [
