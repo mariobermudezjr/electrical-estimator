@@ -9,6 +9,9 @@ const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'receipts');
 const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+// Allow uploads up to 6MB (accounts for FormData overhead)
+export const maxBodySize = '6mb';
+
 // POST /api/estimates/[id]/receipts - Upload a receipt image
 export async function POST(
   request: NextRequest,
@@ -74,8 +77,12 @@ export async function POST(
     return NextResponse.json({ success: true, data: receiptData }, { status: 201 });
   } catch (error) {
     console.error('POST /api/estimates/[id]/receipts error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to upload receipt';
+    if (message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json(
-      { error: 'Failed to upload receipt' },
+      { error: message },
       { status: 500 }
     );
   }
