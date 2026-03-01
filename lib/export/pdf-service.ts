@@ -1,7 +1,130 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Estimate } from '@/types/estimate';
+import { Estimate, AIPricingData } from '@/types/estimate';
 import { UserSettings } from '@/types/settings';
+
+function addComparablePricingPage(
+  doc: jsPDF,
+  aiPricing: AIPricingData,
+  estimate: Estimate
+) {
+  const pageWidth = doc.internal.pageSize.width;
+  const leftMargin = 20;
+  const rightMargin = 20;
+  const contentWidth = pageWidth - leftMargin - rightMargin;
+
+  const primaryColor: [number, number, number] = [59, 130, 246];
+  const darkColor: [number, number, number] = [10, 14, 26];
+  const grayColor: [number, number, number] = [155, 168, 192];
+
+  doc.addPage();
+
+  // Title
+  doc.setFontSize(16);
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.text('COMPARABLE PRICING IN YOUR AREA', leftMargin, 20);
+
+  // Location context
+  doc.setFontSize(10);
+  doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+  doc.text(
+    `${estimate.city}${estimate.state ? `, ${estimate.state}` : ''} — ${estimate.workType.replace(/_/g, ' ')}`,
+    leftMargin,
+    28
+  );
+
+  // Summary stats
+  let y = 42;
+
+  doc.setFontSize(11);
+  doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  doc.text('MARKET SUMMARY', leftMargin, y);
+  y += 10;
+
+  // Average price box
+  doc.setFillColor(230, 240, 255);
+  doc.roundedRect(leftMargin, y, contentWidth, 28, 3, 3, 'F');
+
+  doc.setFontSize(10);
+  doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+  doc.text('Average Market Price', leftMargin + 8, y + 10);
+  doc.text('Price Range', leftMargin + 8, y + 22);
+
+  doc.setFontSize(12);
+  doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+  doc.text(
+    `$${aiPricing.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    leftMargin + 80,
+    y + 10
+  );
+  doc.setFontSize(10);
+  doc.text(
+    `$${aiPricing.priceRange.min.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} — $${aiPricing.priceRange.max.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    leftMargin + 80,
+    y + 22
+  );
+
+  // Confidence + your price on the right
+  const confidenceLabel = `Confidence: ${aiPricing.confidence.charAt(0).toUpperCase() + aiPricing.confidence.slice(1)}`;
+  doc.setFontSize(9);
+  doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+  doc.text(confidenceLabel, pageWidth - rightMargin - 8, y + 10, { align: 'right' });
+
+  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+  doc.setFontSize(10);
+  doc.text(
+    `Your Estimate: $${estimate.pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    pageWidth - rightMargin - 8,
+    y + 22,
+    { align: 'right' }
+  );
+
+  y += 38;
+
+  // Sources table
+  if (aiPricing.sources && aiPricing.sources.length > 0) {
+    doc.setFontSize(11);
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    doc.text('PRICING SOURCES', leftMargin, y);
+    y += 6;
+
+    const sourceData = aiPricing.sources.map((s) => [
+      s.source,
+      `$${s.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      s.description,
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: leftMargin, right: rightMargin },
+      head: [['Source', 'Price', 'Description']],
+      body: sourceData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+      },
+      styles: {
+        fontSize: 9,
+        textColor: darkColor,
+      },
+      columnStyles: {
+        0: { cellWidth: 40 },
+        1: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+        2: { cellWidth: 'auto' },
+      },
+    });
+  }
+
+  // Footer note
+  const pageHeight = doc.internal.pageSize.height;
+  doc.setFontSize(7);
+  doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+  const note = `Comparable pricing data retrieved ${new Date(aiPricing.lastUpdated).toLocaleDateString()}. Prices reflect market averages and may vary based on project specifics, site conditions, and material availability.`;
+  const splitNote = doc.splitTextToSize(note, contentWidth);
+  doc.text(splitNote, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
+}
 
 export function generateEstimatePDF(
   estimate: Estimate,
@@ -151,6 +274,11 @@ export function generateEstimatePDF(
   const disclaimer = 'This cost estimate is provided for budget purposes only. Final pricing is subject to finalized scope, site conditions, and official quotation. This estimate is valid for 30 days from the date above.';
   const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
   doc.text(splitDisclaimer, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
+
+  // Comparable pricing page
+  if (estimate.aiPricing) {
+    addComparablePricingPage(doc, estimate.aiPricing, estimate);
+  }
 
   return doc.output('blob');
 }
@@ -304,6 +432,11 @@ export async function generateInvoicePDF(
   const disclaimer = 'This invoice reflects charges for work performed. Payment is due within 30 days of the date above. Please contact us with any questions.';
   const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
   doc.text(splitDisclaimer, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
+
+  // Comparable pricing page
+  if (estimate.aiPricing) {
+    addComparablePricingPage(doc, estimate.aiPricing, estimate);
+  }
 
   // Append receipt images as additional pages
   if (receiptDataUrls && receiptDataUrls.length > 0) {
