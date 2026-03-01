@@ -65,10 +65,20 @@ function cachePricingData(cacheKey: string, data: AIPricingData): void {
   }
 }
 
+// Extract JSON string from AI response (handles markdown code fences)
+function extractJSON(response: string): string {
+  // Strip markdown code fences like ```json ... ``` or ``` ... ```
+  const fenceMatch = response.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    return fenceMatch[1].trim();
+  }
+  return response.trim();
+}
+
 // Parse AI response
 function parseAIResponse(response: string): AIPricingData {
   try {
-    const parsed = JSON.parse(response);
+    const parsed = JSON.parse(extractJSON(response));
 
     return {
       averagePrice: parsed.averagePrice || 0,
@@ -82,7 +92,7 @@ function parseAIResponse(response: string): AIPricingData {
       searchQuery: parsed.searchQuery || '',
     };
   } catch (error) {
-    console.error('Error parsing AI response:', error);
+    console.error('Error parsing AI response:', error, '\nRaw response:', response);
     throw new Error('Failed to parse AI response');
   }
 }
