@@ -76,7 +76,7 @@ async function callAnthropic(prompt: string): Promise<string> {
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-3-opus-20240229',
+      model: 'claude-sonnet-4-6',
       max_tokens: 2000,
       messages: [
         {
