@@ -20,7 +20,7 @@ export default function DashboardPage() {
   // const { data: session, status } = useSession(); // Temporarily disabled
   const router = useRouter();
   const { estimates, isLoading, error, fetchEstimates } = useEstimateStore();
-  const { settings } = useSettingsStore();
+  const { settings, fetchSettings } = useSettingsStore();
 
   // Temporary mock session while we fix NextAuth
   const session = { user: { name: 'Test User', email: 'test@example.com' } };
@@ -32,11 +32,11 @@ export default function DashboardPage() {
   //   }
   // }, [status, router]);
 
-  // Fetch estimates on mount
+  // Fetch estimates and settings on mount
   useEffect(() => {
-    // Skip auth check for now
     fetchEstimates();
-  }, [fetchEstimates]);
+    fetchSettings().catch(() => {});
+  }, [fetchEstimates, fetchSettings]);
 
   // Show loading during data fetch
   if (isLoading) {

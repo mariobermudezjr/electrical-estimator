@@ -18,7 +18,7 @@ export default function EstimateViewPage() {
   const params = useParams();
   const router = useRouter();
   const { getEstimate, deleteEstimate } = useEstimateStore();
-  const { settings } = useSettingsStore();
+  const { settings, fetchSettings } = useSettingsStore();
 
   const [receipts, setReceipts] = useState<ReceiptImage[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -41,7 +41,8 @@ export default function EstimateViewPage() {
 
   useEffect(() => {
     fetchReceipts();
-  }, [fetchReceipts]);
+    fetchSettings().catch(() => {});
+  }, [fetchReceipts, fetchSettings]);
 
   if (!estimate) {
     return (
