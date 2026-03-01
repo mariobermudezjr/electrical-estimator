@@ -75,7 +75,7 @@ export function generateEstimatePDF(
 
   doc.setFontSize(10);
   const splitScope = doc.splitTextToSize(estimate.scopeOfWork, contentWidth);
-  doc.text(splitScope, leftMargin, 124, { align: 'justify', maxWidth: contentWidth });
+  doc.text(splitScope, leftMargin, 124, { maxWidth: contentWidth });
 
   // Bill of Quantity section
   const billOfQuantityY = 124 + (splitScope.length * 5) + 6;
@@ -228,7 +228,7 @@ export async function generateInvoicePDF(
 
   doc.setFontSize(10);
   const splitScope = doc.splitTextToSize(estimate.scopeOfWork, contentWidth);
-  doc.text(splitScope, leftMargin, 124, { align: 'justify', maxWidth: contentWidth });
+  doc.text(splitScope, leftMargin, 124, { maxWidth: contentWidth });
 
   // Bill of Quantity section
   const billOfQuantityY = 124 + (splitScope.length * 5) + 6;

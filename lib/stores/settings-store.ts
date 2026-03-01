@@ -13,7 +13,7 @@ export interface UserSettings {
 }
 
 export const defaultSettings: UserSettings = {
-  companyName: 'My Electrical Company',
+  companyName: 'Charlies Electric',
   defaultHourlyRate: 75,
   defaultMarkupPercentage: 20,
   preferredAIProvider: 'openai',
