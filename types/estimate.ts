@@ -64,6 +64,7 @@ export interface ReceiptImage {
 
 export interface Estimate {
   id: string;
+  clientId?: string;
   clientName: string;
   clientEmail?: string;
   clientPhone?: string;

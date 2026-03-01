@@ -18,6 +18,7 @@ import { ArrowLeft, Plus, Trash2, Save, DollarSign, FileText } from 'lucide-reac
 import { AIPricingCard } from '@/components/estimates/AIPricingCard';
 import { TemplateSelector } from '@/components/templates/TemplateSelector';
 import { ScopeTemplate } from '@/types/template';
+import { ClientPicker } from '@/components/clients/ClientPicker';
 
 export default function NewEstimatePage() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function NewEstimatePage() {
   const { settings } = useSettingsStore();
 
   // Form state
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -93,6 +95,7 @@ export default function NewEstimatePage() {
 
     // Create estimate without id, createdAt, updatedAt (MongoDB handles these)
     const estimateData = {
+      clientId: selectedClientId || undefined,
       clientName,
       clientPhone: clientPhone || undefined,
       clientEmail: clientEmail || undefined,
@@ -154,44 +157,18 @@ export default function NewEstimatePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Client Information</CardTitle>
-                <CardDescription>Enter the customer's contact details</CardDescription>
+                <CardDescription>Select an existing client or add a new one</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="clientName">Client Name *</Label>
-                  <Input
-                    id="clientName"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="John Smith"
-                    className="mt-1.5"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="clientPhone">Phone</Label>
-                    <Input
-                      id="clientPhone"
-                      type="tel"
-                      value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="(555) 123-4567"
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="clientEmail">Email</Label>
-                    <Input
-                      id="clientEmail"
-                      type="email"
-                      value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
-                      placeholder="john@example.com"
-                      className="mt-1.5"
-                    />
-                  </div>
-                </div>
+              <CardContent>
+                <ClientPicker
+                  selectedClientId={selectedClientId}
+                  onSelect={(clientId, name, email, phone) => {
+                    setSelectedClientId(clientId);
+                    setClientName(name);
+                    setClientEmail(email || '');
+                    setClientPhone(phone || '');
+                  }}
+                />
               </CardContent>
             </Card>
 

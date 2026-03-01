@@ -33,6 +33,11 @@ const EstimateSchema = new Schema<IEstimate>(
       required: true,
       index: true
     },
+    clientId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Client',
+      index: true,
+    },
     clientName: {
       type: String,
       required: true,

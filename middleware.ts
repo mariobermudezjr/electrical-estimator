@@ -33,9 +33,11 @@ export const config = {
   matcher: [
     '/',
     '/estimates/:path*',
+    '/clients/:path*',
     '/settings',
     '/auth/signin',
     '/api/estimates/:path*',
+    '/api/clients/:path*',
     '/api/settings/:path*',
     '/api/ai/:path*',
     '/api/templates/:path*',

@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { WorkType } from '@/types/estimate';
 import { ArrowLeft, Plus, Trash2, Save, DollarSign } from 'lucide-react';
 import { AIPricingCard } from '@/components/estimates/AIPricingCard';
+import { ClientPicker } from '@/components/clients/ClientPicker';
 
 export default function EditEstimatePage() {
   const params = useParams();
@@ -26,6 +27,7 @@ export default function EditEstimatePage() {
   const estimate = getEstimate(params.id as string);
 
   // Form state - initialize with existing estimate data
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientEmail, setClientEmail] = useState('');
@@ -46,6 +48,7 @@ export default function EditEstimatePage() {
   // Load estimate data on mount
   useEffect(() => {
     if (estimate) {
+      setSelectedClientId(estimate.clientId || '');
       setClientName(estimate.clientName);
       setClientPhone(estimate.clientPhone || '');
       setClientEmail(estimate.clientEmail || '');
@@ -118,6 +121,7 @@ export default function EditEstimatePage() {
     }
 
     const updates = {
+      clientId: selectedClientId || undefined,
       clientName,
       clientPhone: clientPhone || undefined,
       clientEmail: clientEmail || undefined,
@@ -178,44 +182,19 @@ export default function EditEstimatePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Client Information</CardTitle>
-                <CardDescription>Update the customer's contact details</CardDescription>
+                <CardDescription>Select an existing client or add a new one</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="clientName">Client Name *</Label>
-                  <Input
-                    id="clientName"
-                    value={clientName}
-                    onChange={(e) => setClientName(e.target.value)}
-                    placeholder="John Smith"
-                    className="mt-1.5"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="clientPhone">Phone</Label>
-                    <Input
-                      id="clientPhone"
-                      type="tel"
-                      value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="(555) 123-4567"
-                      className="mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="clientEmail">Email</Label>
-                    <Input
-                      id="clientEmail"
-                      type="email"
-                      value={clientEmail}
-                      onChange={(e) => setClientEmail(e.target.value)}
-                      placeholder="john@example.com"
-                      className="mt-1.5"
-                    />
-                  </div>
-                </div>
+              <CardContent>
+                <ClientPicker
+                  selectedClientId={selectedClientId}
+                  onSelect={(clientId, name, email, phone) => {
+                    setSelectedClientId(clientId);
+                    setClientName(name);
+                    setClientEmail(email || '');
+                    setClientPhone(phone || '');
+                  }}
+                  fallbackClientName={!estimate.clientId ? estimate.clientName : undefined}
+                />
               </CardContent>
             </Card>
 

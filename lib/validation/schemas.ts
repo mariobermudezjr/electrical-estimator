@@ -53,8 +53,18 @@ const aiPricingDataSchema = z.object({
   searchQuery: z.string()
 }).optional();
 
+// Client Schemas
+export const createClientSchema = z.object({
+  name: z.string().min(1).max(200),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional(),
+});
+
+export const updateClientSchema = createClientSchema.partial();
+
 // Create Estimate Schema
 export const createEstimateSchema = z.object({
+  clientId: z.string().optional(),
   clientName: z.string().min(1).max(200),
   clientEmail: z.string().email().optional().or(z.literal('')),
   clientPhone: z.string().optional(),
