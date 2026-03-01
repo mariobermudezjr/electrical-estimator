@@ -31,6 +31,12 @@ function parseEstimateDates(estimate: any): Estimate {
           lastUpdated: new Date(estimate.aiPricing.lastUpdated),
         }
       : undefined,
+    receipts: estimate.receipts
+      ? estimate.receipts.map((r: any) => ({
+          ...r,
+          uploadedAt: new Date(r.uploadedAt),
+        }))
+      : undefined,
   };
 }
 

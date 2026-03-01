@@ -53,6 +53,14 @@ export interface AIPricingData {
   searchQuery: string;
 }
 
+export interface ReceiptImage {
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  uploadedAt: Date;
+}
+
 export interface Estimate {
   id: string;
   clientName: string;
@@ -69,6 +77,7 @@ export interface Estimate {
   createdAt: Date;
   updatedAt: Date;
   notes?: string;
+  receipts?: ReceiptImage[];
 }
 
 // Serializable version for local storage

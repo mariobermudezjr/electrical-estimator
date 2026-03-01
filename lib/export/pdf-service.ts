@@ -155,10 +155,11 @@ export function generateEstimatePDF(
   return doc.output('blob');
 }
 
-export function generateInvoicePDF(
+export async function generateInvoicePDF(
   estimate: Estimate,
-  companyInfo: UserSettings
-): Blob {
+  companyInfo: UserSettings,
+  receiptDataUrls?: string[]
+): Promise<Blob> {
   const doc = new jsPDF();
 
   // Layout constants
@@ -303,6 +304,24 @@ export function generateInvoicePDF(
   const disclaimer = 'This invoice reflects charges for work performed. Payment is due within 30 days of the date above. Please contact us with any questions.';
   const splitDisclaimer = doc.splitTextToSize(disclaimer, contentWidth);
   doc.text(splitDisclaimer, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
+
+  // Append receipt images as additional pages
+  if (receiptDataUrls && receiptDataUrls.length > 0) {
+    for (const dataUrl of receiptDataUrls) {
+      doc.addPage();
+
+      doc.setFontSize(12);
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      doc.text('RECEIPT / PROOF OF PURCHASE', leftMargin, 20);
+
+      const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+      const maxW = contentWidth;
+      const maxH = pageHeight - 50; // margins top + bottom
+
+      // Use jsPDF's built-in scaling
+      doc.addImage(dataUrl, format, leftMargin, 30, maxW, maxH, undefined, 'FAST');
+    }
+  }
 
   return doc.output('blob');
 }

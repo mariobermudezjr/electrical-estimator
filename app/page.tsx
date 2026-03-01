@@ -157,10 +157,10 @@ export default function DashboardPage() {
                         <div className="flex items-start gap-3">
                           <button
                             title="Download Invoice PDF"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              const blob = generateInvoicePDF(estimate, settings);
+                              const blob = await generateInvoicePDF(estimate, settings);
                               const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
                               downloadPDF(blob, filename);
                             }}

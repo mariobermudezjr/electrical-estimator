@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { rm } from 'fs/promises';
+import path from 'path';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { updateEstimateSchema } from '@/lib/validation/schemas';
@@ -95,6 +97,10 @@ export async function DELETE(
     if (!estimate) {
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
+
+    // Clean up receipt files from disk
+    const receiptsDir = path.join(process.cwd(), 'uploads', 'receipts', id);
+    await rm(receiptsDir, { recursive: true, force: true });
 
     return NextResponse.json({ success: true, message: 'Estimate deleted' });
   } catch (error) {

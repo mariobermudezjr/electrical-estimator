@@ -16,6 +16,14 @@ const LineItemSchema = new Schema({
   type: { type: String, enum: ['labor', 'material'], required: true }
 }, { _id: false });
 
+const ReceiptImageSchema = new Schema({
+  filename: { type: String, required: true },
+  originalName: { type: String, required: true },
+  mimeType: { type: String, required: true },
+  size: { type: Number, required: true },
+  uploadedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const EstimateSchema = new Schema<IEstimate>(
   {
     userId: {
@@ -104,7 +112,8 @@ const EstimateSchema = new Schema<IEstimate>(
       default: 'draft',
       required: true
     },
-    notes: { type: String }
+    notes: { type: String },
+    receipts: [ReceiptImageSchema]
   },
   {
     timestamps: true,

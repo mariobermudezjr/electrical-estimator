@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useEstimateStore } from '@/lib/stores/estimate-store';
 import { useSettingsStore } from '@/lib/stores/settings-store';
@@ -10,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
-import { ArrowLeft, Download, FileText, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X } from 'lucide-react';
+import { ReceiptImage } from '@/types/estimate';
 
 export default function EstimateViewPage() {
   const params = useParams();
@@ -18,7 +20,28 @@ export default function EstimateViewPage() {
   const { getEstimate, deleteEstimate } = useEstimateStore();
   const { settings } = useSettingsStore();
 
+  const [receipts, setReceipts] = useState<ReceiptImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const estimate = getEstimate(params.id as string);
+
+  const fetchReceipts = useCallback(async () => {
+    if (!params.id) return;
+    try {
+      const res = await fetch(`/api/estimates/${params.id}/receipts`);
+      if (res.ok) {
+        const { data } = await res.json();
+        setReceipts(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch receipts:', err);
+    }
+  }, [params.id]);
+
+  useEffect(() => {
+    fetchReceipts();
+  }, [fetchReceipts]);
 
   if (!estimate) {
     return (
@@ -64,10 +87,68 @@ export default function EstimateViewPage() {
     downloadExcel(blob, filename);
   };
 
-  const handleInvoicePDF = () => {
-    const blob = generateInvoicePDF(estimate, settings);
+  const handleInvoicePDF = async () => {
+    // Fetch receipt images as base64 for PDF embedding
+    let receiptDataUrls: string[] = [];
+    if (receipts.length > 0) {
+      const results = await Promise.all(
+        receipts.map(async (r) => {
+          const res = await fetch(
+            `/api/estimates/${estimate.id}/receipts/${r.filename}?format=base64`
+          );
+          if (res.ok) {
+            const { data } = await res.json();
+            return data as string;
+          }
+          return null;
+        })
+      );
+      receiptDataUrls = results.filter((r): r is string => r !== null);
+    }
+    const blob = await generateInvoicePDF(estimate, settings, receiptDataUrls);
     const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
+  };
+
+  const handleUploadReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/estimates/${estimate.id}/receipts`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const { error } = await res.json();
+        alert(error || 'Failed to upload receipt');
+      } else {
+        await fetchReceipts();
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Failed to upload receipt');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteReceipt = async (filename: string) => {
+    if (!confirm('Delete this receipt?')) return;
+    try {
+      const res = await fetch(
+        `/api/estimates/${estimate.id}/receipts/${filename}`,
+        { method: 'DELETE' }
+      );
+      if (res.ok) {
+        setReceipts((prev) => prev.filter((r) => r.filename !== filename));
+      }
+    } catch (err) {
+      console.error('Delete receipt error:', err);
+    }
   };
 
   const handleInvoiceExcel = () => {
@@ -253,6 +334,67 @@ export default function EstimateViewPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Receipts */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Receipts</CardTitle>
+                  <CardDescription>Proof of purchase images (included in Invoice PDF)</CardDescription>
+                </div>
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    className="hidden"
+                    onChange={handleUploadReceipt}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploading ? 'Uploading...' : 'Upload Receipt'}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {receipts.length === 0 ? (
+                <p className="text-sm text-text-tertiary">No receipts attached yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {receipts.map((receipt) => (
+                    <div
+                      key={receipt.filename}
+                      className="flex items-center justify-between bg-background-elevated p-3 rounded-lg"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-text-primary truncate">{receipt.originalName}</p>
+                        <p className="text-xs text-text-tertiary">
+                          {(receipt.size / 1024).toFixed(1)} KB
+                          {' · '}
+                          {new Date(receipt.uploadedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-text-tertiary hover:text-accent-danger ml-2 shrink-0"
+                        onClick={() => handleDeleteReceipt(receipt.filename)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
