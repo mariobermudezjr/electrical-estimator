@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
-const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'receipts');
 const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-
-// Allow uploads up to 6MB (accounts for FormData overhead)
-export const maxBodySize = '6mb';
 
 // POST /api/estimates/[id]/receipts - Upload a receipt image
 export async function POST(
@@ -49,24 +43,20 @@ export async function POST(
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    // Generate unique filename
+    // Convert file to base64 data URL and store in MongoDB
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const base64 = buffer.toString('base64');
+    const dataUrl = `data:${file.type};base64,${base64}`;
+
     const ext = file.type === 'image/png' ? '.png' : '.jpg';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 
-    // Ensure upload directory exists
-    const estimateDir = path.join(UPLOAD_DIR, id);
-    await mkdir(estimateDir, { recursive: true });
-
-    // Write file to disk
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(path.join(estimateDir, filename), buffer);
-
-    // Save metadata to MongoDB
     const receiptData = {
       filename,
       originalName: file.name,
       mimeType: file.type,
       size: file.size,
+      data: dataUrl,
       uploadedAt: new Date(),
     };
 
@@ -74,21 +64,20 @@ export async function POST(
       $push: { receipts: receiptData },
     });
 
-    return NextResponse.json({ success: true, data: receiptData }, { status: 201 });
+    // Return metadata only (exclude data)
+    const { data: _, ...metadata } = receiptData;
+    return NextResponse.json({ success: true, data: metadata }, { status: 201 });
   } catch (error) {
     console.error('POST /api/estimates/[id]/receipts error:', error);
     const message = error instanceof Error ? error.message : 'Failed to upload receipt';
     if (message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-// GET /api/estimates/[id]/receipts - List receipt images
+// GET /api/estimates/[id]/receipts - List receipt metadata (excludes image data)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -99,7 +88,10 @@ export async function GET(
 
     await connectDB();
 
-    const estimate = await Estimate.findOne({ _id: id, userId });
+    const estimate = await Estimate.findOne(
+      { _id: id, userId },
+      { 'receipts.data': 0 }
+    );
     if (!estimate) {
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }

@@ -58,6 +58,7 @@ export interface ReceiptImage {
   originalName: string;
   mimeType: string;
   size: number;
+  data?: string;
   uploadedAt: Date;
 }
 

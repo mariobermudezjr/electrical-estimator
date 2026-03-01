@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     const estimates = await Estimate.find({ userId })
+      .select({ 'receipts.data': 0 })
       .sort({ createdAt: -1 })
       .lean();
 

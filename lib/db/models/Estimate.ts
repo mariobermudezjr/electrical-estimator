@@ -21,6 +21,7 @@ const ReceiptImageSchema = new Schema({
   originalName: { type: String, required: true },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
+  data: { type: String, required: true },
   uploadedAt: { type: Date, default: Date.now },
 }, { _id: false });
 

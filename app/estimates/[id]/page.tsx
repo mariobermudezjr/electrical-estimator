@@ -94,7 +94,7 @@ export default function EstimateViewPage() {
       const results = await Promise.all(
         receipts.map(async (r) => {
           const res = await fetch(
-            `/api/estimates/${estimate.id}/receipts/${r.filename}?format=base64`
+            `/api/estimates/${estimate.id}/receipts/${r.filename}`
           );
           if (res.ok) {
             const { data } = await res.json();
