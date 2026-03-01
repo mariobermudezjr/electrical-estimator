@@ -8,8 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
-import { generateEstimatePDF, downloadPDF } from '@/lib/export/pdf-service';
-import { generateEstimateExcel, downloadExcel } from '@/lib/export/excel-service';
+import { generateEstimatePDF, generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
+import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import { ArrowLeft, Download, FileText, Trash2, Edit } from 'lucide-react';
 
 export default function EstimateViewPage() {
@@ -64,6 +64,18 @@ export default function EstimateViewPage() {
     downloadExcel(blob, filename);
   };
 
+  const handleInvoicePDF = () => {
+    const blob = generateInvoicePDF(estimate, settings);
+    const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
+    downloadPDF(blob, filename);
+  };
+
+  const handleInvoiceExcel = () => {
+    const blob = generateInvoiceExcel(estimate);
+    const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.xlsx`;
+    downloadExcel(blob, filename);
+  };
+
   return (
     <div className="min-h-screen bg-background-primary p-6">
       <div className="max-w-5xl mx-auto">
@@ -102,6 +114,15 @@ export default function EstimateViewPage() {
             <Button onClick={handleExportPDF}>
               <Download className="w-4 h-4 mr-2" />
               Export PDF
+            </Button>
+            <div className="w-px h-8 bg-border-primary" />
+            <Button variant="outline" onClick={handleInvoiceExcel}>
+              <FileText className="w-4 h-4 mr-2" />
+              Invoice Excel
+            </Button>
+            <Button onClick={handleInvoicePDF}>
+              <Download className="w-4 h-4 mr-2" />
+              Invoice PDF
             </Button>
           </div>
         </div>

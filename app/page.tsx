@@ -9,7 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
-import { Plus, Settings, FileText } from 'lucide-react';
+import { Plus, Settings, FileText, Receipt } from 'lucide-react';
+import { generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
+import { useSettingsStore } from '@/lib/stores/settings-store';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { ErrorMessage } from '@/components/ui/error-message';
 import { SignOutButton } from '@/components/auth/SignOutButton';
@@ -18,6 +20,7 @@ export default function DashboardPage() {
   // const { data: session, status } = useSession(); // Temporarily disabled
   const router = useRouter();
   const { estimates, isLoading, error, fetchEstimates } = useEstimateStore();
+  const { settings } = useSettingsStore();
 
   // Temporary mock session while we fix NextAuth
   const session = { user: { name: 'Test User', email: 'test@example.com' } };
@@ -151,12 +154,27 @@ export default function DashboardPage() {
                             {estimate.projectAddress}, {estimate.city}
                           </CardDescription>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-accent-primary">
-                            {formatCurrency(estimate.pricing.total)}
-                          </div>
-                          <div className="text-sm text-text-secondary">
-                            {new Date(estimate.createdAt).toLocaleDateString()}
+                        <div className="flex items-start gap-3">
+                          <button
+                            title="Download Invoice PDF"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const blob = generateInvoicePDF(estimate, settings);
+                              const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
+                              downloadPDF(blob, filename);
+                            }}
+                            className="mt-1 p-2 rounded-md hover:bg-background-elevated text-text-tertiary hover:text-accent-primary transition-colors"
+                          >
+                            <Receipt className="w-4 h-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-accent-primary">
+                              {formatCurrency(estimate.pricing.total)}
+                            </div>
+                            <div className="text-sm text-text-secondary">
+                              {new Date(estimate.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </div>
