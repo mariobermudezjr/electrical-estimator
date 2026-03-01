@@ -11,18 +11,20 @@ import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle } from 'lucide-react';
 import { ReceiptImage } from '@/types/estimate';
 
 export default function EstimateViewPage() {
   const params = useParams();
   const router = useRouter();
-  const { getEstimate, deleteEstimate } = useEstimateStore();
+  const { getEstimate, deleteEstimate, updateEstimate } = useEstimateStore();
   const { settings, fetchSettings } = useSettingsStore();
 
   const [receipts, setReceipts] = useState<ReceiptImage[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const estimate = getEstimate(params.id as string);
 
@@ -73,6 +75,18 @@ export default function EstimateViewPage() {
         alert('Failed to delete estimate. Please try again.');
         console.error('Delete estimate error:', error);
       }
+    }
+  };
+
+  const handleStatusChange = async (newStatus: 'sent' | 'approved' | 'rejected') => {
+    setUpdatingStatus(true);
+    try {
+      await updateEstimate(estimate.id, { status: newStatus });
+    } catch (error) {
+      alert('Failed to update status. Please try again.');
+      console.error('Update status error:', error);
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -215,16 +229,60 @@ export default function EstimateViewPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Project Details</CardTitle>
-                <Badge
-                  variant={
-                    estimate.status === 'approved' ? 'success' :
-                    estimate.status === 'sent' ? 'default' :
-                    estimate.status === 'rejected' ? 'danger' :
-                    'warning'
-                  }
-                >
-                  {estimate.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      estimate.status === 'approved' ? 'success' :
+                      estimate.status === 'sent' ? 'default' :
+                      estimate.status === 'rejected' ? 'danger' :
+                      'warning'
+                    }
+                  >
+                    {estimate.status}
+                  </Badge>
+                  {estimate.status === 'draft' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleStatusChange('sent')}
+                      disabled={updatingStatus}
+                    >
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      Mark as Sent
+                    </Button>
+                  )}
+                  {estimate.status === 'sent' && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="success"
+                        onClick={() => handleStatusChange('approved')}
+                        disabled={updatingStatus}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Approve
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="danger"
+                        onClick={() => handleStatusChange('rejected')}
+                        disabled={updatingStatus}
+                      >
+                        <XCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Reject
+                      </Button>
+                    </>
+                  )}
+                  {estimate.status === 'rejected' && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleStatusChange('sent')}
+                      disabled={updatingStatus}
+                    >
+                      <Send className="w-3.5 h-3.5 mr-1.5" />
+                      Resend
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-6">
