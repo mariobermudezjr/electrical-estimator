@@ -209,7 +209,7 @@ export default function EstimateViewPage() {
             </Button>
             <Button onClick={handleExportPDF}>
               <Download className="w-4 h-4 mr-2" />
-              Export PDF
+              Estimate PDF
             </Button>
             <div className="w-px h-8 bg-border-primary" />
             <Button variant="outline" onClick={handleInvoiceExcel}>
