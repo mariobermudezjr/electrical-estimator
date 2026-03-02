@@ -126,10 +126,11 @@ function addComparablePricingPage(
   doc.text(splitNote, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
 }
 
-export function generateEstimatePDF(
+export async function generateEstimatePDF(
   estimate: Estimate,
-  companyInfo: UserSettings
-): Blob {
+  companyInfo: UserSettings,
+  receiptDataUrls?: string[]
+): Promise<Blob> {
   const doc = new jsPDF();
 
   // Layout constants
@@ -278,6 +279,24 @@ export function generateEstimatePDF(
   // Comparable pricing page
   if (estimate.aiPricing?.averagePrice != null && estimate.aiPricing?.priceRange) {
     addComparablePricingPage(doc, estimate.aiPricing, estimate);
+  }
+
+  // Append receipt images as additional pages
+  if (receiptDataUrls && receiptDataUrls.length > 0) {
+    const pageHeight = doc.internal.pageSize.height;
+    for (const dataUrl of receiptDataUrls) {
+      doc.addPage();
+
+      doc.setFontSize(12);
+      doc.setTextColor(10, 14, 26);
+      doc.text('RECEIPT / PROOF OF PURCHASE', leftMargin, 20);
+
+      const format = dataUrl.includes('image/png') ? 'PNG' : 'JPEG';
+      const maxW = contentWidth;
+      const maxH = pageHeight - 50;
+
+      doc.addImage(dataUrl, format, leftMargin, 30, maxW, maxH, undefined, 'FAST');
+    }
   }
 
   return doc.output('blob');

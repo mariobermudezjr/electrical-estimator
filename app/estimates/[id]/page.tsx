@@ -90,8 +90,24 @@ export default function EstimateViewPage() {
     }
   };
 
-  const handleExportPDF = () => {
-    const blob = generateEstimatePDF(estimate, settings);
+  const handleExportPDF = async () => {
+    let receiptDataUrls: string[] = [];
+    if (receipts.length > 0) {
+      const results = await Promise.all(
+        receipts.map(async (r) => {
+          const res = await fetch(
+            `/api/estimates/${estimate.id}/receipts/${r.filename}`
+          );
+          if (res.ok) {
+            const { data } = await res.json();
+            return data as string;
+          }
+          return null;
+        })
+      );
+      receiptDataUrls = results.filter((r): r is string => r !== null);
+    }
+    const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls);
     const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
   };
