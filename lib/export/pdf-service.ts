@@ -276,7 +276,7 @@ export function generateEstimatePDF(
   doc.text(splitDisclaimer, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
 
   // Comparable pricing page
-  if (estimate.aiPricing) {
+  if (estimate.aiPricing?.averagePrice != null && estimate.aiPricing?.priceRange) {
     addComparablePricingPage(doc, estimate.aiPricing, estimate);
   }
 
@@ -434,7 +434,7 @@ export async function generateInvoicePDF(
   doc.text(splitDisclaimer, leftMargin, pageHeight - 15, { maxWidth: contentWidth });
 
   // Comparable pricing page
-  if (estimate.aiPricing) {
+  if (estimate.aiPricing?.averagePrice != null && estimate.aiPricing?.priceRange) {
     addComparablePricingPage(doc, estimate.aiPricing, estimate);
   }
 
