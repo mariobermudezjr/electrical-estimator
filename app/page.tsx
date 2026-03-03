@@ -166,7 +166,7 @@ export default function DashboardPage() {
                             onClick={async (e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+                              const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
                               const blob = await generateInvoicePDF(estimate, settings, undefined, logoDataUrl);
                               const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
                               downloadPDF(blob, filename);

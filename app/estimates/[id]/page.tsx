@@ -108,7 +108,7 @@ export default function EstimateViewPage() {
       );
       receiptDataUrls = results.filter((r): r is string => r !== null);
     }
-    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
     const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls, logoDataUrl);
     const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
@@ -138,7 +138,7 @@ export default function EstimateViewPage() {
       );
       receiptDataUrls = results.filter((r): r is string => r !== null);
     }
-    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
     const blob = await generateInvoicePDF(estimate, settings, receiptDataUrls, logoDataUrl);
     const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
