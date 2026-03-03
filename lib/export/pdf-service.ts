@@ -157,10 +157,10 @@ export async function generateEstimatePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
-  const textLeft = logoDataUrl ? 45 : 20;
+  const textLeft = logoDataUrl ? 68 : 20;
 
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'PNG', 20, 10, 22, 22);
+    doc.addImage(logoDataUrl, 'PNG', 20, 8, 44, 44);
   }
 
   doc.setFontSize(24);
@@ -340,10 +340,10 @@ export async function generateInvoicePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
-  const textLeft = logoDataUrl ? 45 : 20;
+  const textLeft = logoDataUrl ? 68 : 20;
 
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'PNG', 20, 10, 22, 22);
+    doc.addImage(logoDataUrl, 'PNG', 20, 8, 44, 44);
   }
 
   doc.setFontSize(24);
