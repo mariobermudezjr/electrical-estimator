@@ -157,26 +157,20 @@ export async function generateEstimatePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
-  const textLeft = logoDataUrl ? 68 : 20;
-
-  if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'PNG', 20, 8, 44, 44);
-  }
-
   doc.setFontSize(24);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.text(companyInfo.companyName, textLeft, 20);
+  doc.text(companyInfo.companyName, 20, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
   if (companyInfo.companyEmail) {
-    doc.text(companyInfo.companyEmail, textLeft, 28);
+    doc.text(companyInfo.companyEmail, 20, 28);
   }
   if (companyInfo.companyPhone) {
-    doc.text(companyInfo.companyPhone, textLeft, 33);
+    doc.text(companyInfo.companyPhone, 20, 33);
   }
   if (companyInfo.companyAddress) {
-    doc.text(companyInfo.companyAddress, textLeft, 38);
+    doc.text(companyInfo.companyAddress, 20, 38);
   }
 
   // Estimate title
@@ -188,6 +182,11 @@ export async function generateEstimatePDF(
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, 150, 28);
   doc.text('Status: PRELIMINARY', 150, 33);
+
+  // Logo centered under title/status block
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'PNG', 146, 37, 44, 44);
+  }
 
   // Client info section
   doc.setFontSize(12);
@@ -340,26 +339,20 @@ export async function generateInvoicePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
-  const textLeft = logoDataUrl ? 68 : 20;
-
-  if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'PNG', 20, 8, 44, 44);
-  }
-
   doc.setFontSize(24);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.text(companyInfo.companyName, textLeft, 20);
+  doc.text(companyInfo.companyName, 20, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
   if (companyInfo.companyEmail) {
-    doc.text(companyInfo.companyEmail, textLeft, 28);
+    doc.text(companyInfo.companyEmail, 20, 28);
   }
   if (companyInfo.companyPhone) {
-    doc.text(companyInfo.companyPhone, textLeft, 33);
+    doc.text(companyInfo.companyPhone, 20, 33);
   }
   if (companyInfo.companyAddress) {
-    doc.text(companyInfo.companyAddress, textLeft, 38);
+    doc.text(companyInfo.companyAddress, 20, 38);
   }
 
   // Invoice title
@@ -371,6 +364,11 @@ export async function generateInvoicePDF(
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
   doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, 150, 28);
   doc.text('Status: DUE', 150, 33);
+
+  // Logo centered under title/status block
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'PNG', 146, 37, 44, 44);
+  }
 
   // Client info section
   doc.setFontSize(12);
