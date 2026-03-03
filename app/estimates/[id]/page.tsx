@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
-import { generateEstimatePDF, generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
+import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
+import Image from 'next/image';
 import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle } from 'lucide-react';
 import { ReceiptImage } from '@/types/estimate';
 
@@ -107,7 +108,8 @@ export default function EstimateViewPage() {
       );
       receiptDataUrls = results.filter((r): r is string => r !== null);
     }
-    const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls);
+    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+    const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls, logoDataUrl);
     const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
   };
@@ -136,7 +138,8 @@ export default function EstimateViewPage() {
       );
       receiptDataUrls = results.filter((r): r is string => r !== null);
     }
-    const blob = await generateInvoicePDF(estimate, settings, receiptDataUrls);
+    const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+    const blob = await generateInvoicePDF(estimate, settings, receiptDataUrls, logoDataUrl);
     const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
     downloadPDF(blob, filename);
   };
@@ -199,6 +202,13 @@ export default function EstimateViewPage() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
+            <Image
+              src="/charlies-electric-logo.png"
+              alt="Charlie's Electric"
+              width={48}
+              height={48}
+              className="rounded-md"
+            />
             <div>
               <h1 className="text-3xl font-bold text-text-primary mb-1">
                 {estimate.clientName}

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
 import { Plus, Settings, FileText, Receipt, Users } from 'lucide-react';
-import { generateInvoicePDF, downloadPDF } from '@/lib/export/pdf-service';
+import { generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
 import { ErrorMessage } from '@/components/ui/error-message';
@@ -166,7 +166,8 @@ export default function DashboardPage() {
                             onClick={async (e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              const blob = await generateInvoicePDF(estimate, settings);
+                              const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo.png').catch(() => undefined);
+                              const blob = await generateInvoicePDF(estimate, settings, undefined, logoDataUrl);
                               const filename = `invoice-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
                               downloadPDF(blob, filename);
                             }}

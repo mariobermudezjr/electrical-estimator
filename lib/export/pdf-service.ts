@@ -3,6 +3,17 @@ import autoTable from 'jspdf-autotable';
 import { Estimate, AIPricingData } from '@/types/estimate';
 import { UserSettings } from '@/types/settings';
 
+export async function loadImageAsDataUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 function addComparablePricingPage(
   doc: jsPDF,
   aiPricing: AIPricingData,
@@ -129,7 +140,8 @@ function addComparablePricingPage(
 export async function generateEstimatePDF(
   estimate: Estimate,
   companyInfo: UserSettings,
-  receiptDataUrls?: string[]
+  receiptDataUrls?: string[],
+  logoDataUrl?: string
 ): Promise<Blob> {
   const doc = new jsPDF();
 
@@ -145,20 +157,26 @@ export async function generateEstimatePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
+  const textLeft = logoDataUrl ? 45 : 20;
+
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'PNG', 20, 10, 22, 22);
+  }
+
   doc.setFontSize(24);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.text(companyInfo.companyName, 20, 20);
+  doc.text(companyInfo.companyName, textLeft, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
   if (companyInfo.companyEmail) {
-    doc.text(companyInfo.companyEmail, 20, 28);
+    doc.text(companyInfo.companyEmail, textLeft, 28);
   }
   if (companyInfo.companyPhone) {
-    doc.text(companyInfo.companyPhone, 20, 33);
+    doc.text(companyInfo.companyPhone, textLeft, 33);
   }
   if (companyInfo.companyAddress) {
-    doc.text(companyInfo.companyAddress, 20, 38);
+    doc.text(companyInfo.companyAddress, textLeft, 38);
   }
 
   // Estimate title
@@ -305,7 +323,8 @@ export async function generateEstimatePDF(
 export async function generateInvoicePDF(
   estimate: Estimate,
   companyInfo: UserSettings,
-  receiptDataUrls?: string[]
+  receiptDataUrls?: string[],
+  logoDataUrl?: string
 ): Promise<Blob> {
   const doc = new jsPDF();
 
@@ -321,20 +340,26 @@ export async function generateInvoicePDF(
   const grayColor: [number, number, number] = [155, 168, 192];
 
   // Header with company info
+  const textLeft = logoDataUrl ? 45 : 20;
+
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'PNG', 20, 10, 22, 22);
+  }
+
   doc.setFontSize(24);
   doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
-  doc.text(companyInfo.companyName, 20, 20);
+  doc.text(companyInfo.companyName, textLeft, 20);
 
   doc.setFontSize(10);
   doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
   if (companyInfo.companyEmail) {
-    doc.text(companyInfo.companyEmail, 20, 28);
+    doc.text(companyInfo.companyEmail, textLeft, 28);
   }
   if (companyInfo.companyPhone) {
-    doc.text(companyInfo.companyPhone, 20, 33);
+    doc.text(companyInfo.companyPhone, textLeft, 33);
   }
   if (companyInfo.companyAddress) {
-    doc.text(companyInfo.companyAddress, 20, 38);
+    doc.text(companyInfo.companyAddress, textLeft, 38);
   }
 
   // Invoice title
