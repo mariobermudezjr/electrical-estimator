@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createRequire } from 'module';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 import { parseHomeDepotPDF } from '@/lib/import/homedepot-parser';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
-  // Dynamic import to avoid bundling issues
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { PDFParse } = require('pdf-parse') as { PDFParse: new (data: Uint8Array) => { getText: () => Promise<{ text: string }> } };
+  // Use createRequire to bypass Next.js bundler and load pdf-parse natively
+  const require_ = createRequire(import.meta.url);
+  const pdfParse = require_('pdf-parse');
+  const PDFParse = pdfParse.PDFParse;
 
   const uint8 = new Uint8Array(buffer);
   const parser = new PDFParse(uint8);
