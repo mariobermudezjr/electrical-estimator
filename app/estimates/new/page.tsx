@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { WorkType, Estimate, LineItem } from '@/types/estimate';
 import { ArrowLeft, Plus, Trash2, Save, DollarSign, FileText } from 'lucide-react';
 import { AIPricingCard } from '@/components/estimates/AIPricingCard';
+import { HomeDepotImport } from '@/components/estimates/HomeDepotImport';
 import { TemplateSelector } from '@/components/templates/TemplateSelector';
 import { ScopeTemplate } from '@/types/template';
 import { ClientPicker } from '@/components/clients/ClientPicker';
@@ -85,6 +86,10 @@ export default function NewEstimatePage() {
       unitCost: m.unitCost,
     }));
     setMaterials(formMaterials);
+  };
+
+  const handleHomeDepotImport = (items: Array<{ description: string; quantity: number; unitCost: number }>) => {
+    setMaterials(prev => [...prev, ...items]);
   };
 
   const handleSave = async () => {
@@ -325,9 +330,10 @@ export default function NewEstimatePage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
+                <HomeDepotImport onImport={handleHomeDepotImport} />
                 {materials.length === 0 ? (
                   <p className="text-sm text-text-tertiary text-center py-8">
-                    No materials added yet. Click "Add Material" to get started.
+                    No materials added yet. Click &quot;Add Material&quot; or import from Home Depot.
                   </p>
                 ) : (
                   materials.map((material, index) => (

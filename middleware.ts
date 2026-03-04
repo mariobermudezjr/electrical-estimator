@@ -41,5 +41,6 @@ export const config = {
     '/api/settings/:path*',
     '/api/ai/:path*',
     '/api/templates/:path*',
+    '/api/import/:path*',
   ],
 };
