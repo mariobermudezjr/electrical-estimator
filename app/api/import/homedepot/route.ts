@@ -5,16 +5,12 @@ import { parseHomeDepotPDF } from '@/lib/import/homedepot-parser';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
-  // Use createRequire to bypass Next.js bundler and load pdf-parse natively
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  // Import pdf-parse/lib/pdf-parse.js directly to skip the test-runner in index.js
   const require_ = createRequire(import.meta.url);
-  const pdfParse = require_('pdf-parse');
-  const PDFParse = pdfParse.PDFParse;
-
-  const uint8 = new Uint8Array(buffer);
-  const parser = new PDFParse(uint8);
-  const result = await parser.getText();
-  return result.text;
+  const pdfParse = require_('pdf-parse/lib/pdf-parse.js');
+  const data = await pdfParse(buffer);
+  return data.text;
 }
 
 // POST /api/import/homedepot - Parse a Home Depot PDF
@@ -44,7 +40,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract text from PDF
-    const buffer = await file.arrayBuffer();
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     let text: string;
     try {
       text = await extractTextFromPDF(buffer);
