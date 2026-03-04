@@ -9,6 +9,7 @@ import { calculateEstimate } from '@/lib/pricing/calculator';
 import { formatCurrency } from '@/lib/pricing/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { AddressAutocomplete } from '@/components/ui/address-autocomplete';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
@@ -207,10 +208,15 @@ export default function EditEstimatePage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="projectAddress">Project Address *</Label>
-                  <Input
+                  <AddressAutocomplete
                     id="projectAddress"
                     value={projectAddress}
-                    onChange={(e) => setProjectAddress(e.target.value)}
+                    onChange={setProjectAddress}
+                    onPlaceSelect={(place) => {
+                      setProjectAddress(place.street);
+                      setCity(place.city);
+                      setState(place.state);
+                    }}
                     placeholder="123 Main Street"
                     className="mt-1.5"
                     required
