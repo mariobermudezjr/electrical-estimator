@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PDFParse } from 'pdf-parse';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 import { parseHomeDepotPDF } from '@/lib/import/homedepot-parser';
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+async function extractTextFromPDF(buffer: ArrayBuffer): Promise<string> {
+  // Dynamic import to avoid bundling issues
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { PDFParse } = require('pdf-parse') as { PDFParse: new (data: Uint8Array) => { getText: () => Promise<{ text: string }> } };
+
+  const uint8 = new Uint8Array(buffer);
+  const parser = new PDFParse(uint8);
+  const result = await parser.getText();
+  return result.text;
+}
 
 // POST /api/import/homedepot - Parse a Home Depot PDF
 export async function POST(request: NextRequest) {
@@ -33,9 +43,16 @@ export async function POST(request: NextRequest) {
 
     // Extract text from PDF
     const buffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(buffer);
-    const parser = new PDFParse(uint8);
-    const { text } = await parser.getText();
+    let text: string;
+    try {
+      text = await extractTextFromPDF(buffer);
+    } catch (pdfError) {
+      console.error('PDF extraction error:', pdfError);
+      return NextResponse.json(
+        { error: 'Could not extract text from PDF. The file may be corrupted.' },
+        { status: 422 }
+      );
+    }
 
     if (!text || text.trim().length === 0) {
       return NextResponse.json(
