@@ -398,6 +398,12 @@ export default function EstimateViewPage() {
                 {/* Summary */}
                 <div className="border-t border-border-primary pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
+                    <span className="text-text-secondary">Pretax Material Total</span>
+                    <span className="font-medium text-text-primary">
+                      {formatCurrency(estimate.pricing.labor.total + estimate.pricing.materials.subtotal)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
                     <span className="text-text-secondary">Subtotal</span>
                     <span className="font-medium text-text-primary">
                       {formatCurrency(estimate.pricing.subtotal)}
