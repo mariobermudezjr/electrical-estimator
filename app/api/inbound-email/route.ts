@@ -8,14 +8,65 @@ import Estimate from '@/lib/db/models/Estimate';
 import User from '@/lib/db/models/User';
 import Settings from '@/lib/db/models/Settings';
 
-interface EmailAttachment {
-  filename: string;
-  content: string; // base64-encoded
-  content_type: string;
-}
-
+const RESEND_API_BASE = 'https://api.resend.com';
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10MB
+
+interface ResendEmail {
+  id: string;
+  from: string;
+  to: string[];
+  subject: string;
+  text: string | null;
+  html: string | null;
+  attachments: Array<{
+    id: string;
+    filename: string;
+    content_type: string;
+  }>;
+}
+
+interface ResendAttachmentMeta {
+  id: string;
+  filename: string;
+  size: number;
+  content_type: string;
+  download_url: string;
+}
+
+async function fetchResendEmail(emailId: string, apiKey: string): Promise<ResendEmail> {
+  const res = await fetch(`${RESEND_API_BASE}/emails/receiving/${emailId}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch email ${emailId}: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+async function fetchAttachmentMeta(
+  emailId: string,
+  attachmentId: string,
+  apiKey: string
+): Promise<ResendAttachmentMeta> {
+  const res = await fetch(
+    `${RESEND_API_BASE}/emails/receiving/${emailId}/attachments/${attachmentId}`,
+    { headers: { Authorization: `Bearer ${apiKey}` } }
+  );
+  if (!res.ok) {
+    throw new Error(`Failed to fetch attachment ${attachmentId}: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function downloadAttachment(downloadUrl: string): Promise<Buffer> {
+  const res = await fetch(downloadUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to download attachment: ${res.status}`);
+  }
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
 
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   const require_ = createRequire(import.meta.url);
@@ -24,7 +75,11 @@ async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   return data.text;
 }
 
-async function processAttachments(attachments: EmailAttachment[]): Promise<{
+async function processAttachments(
+  emailId: string,
+  attachments: Array<{ id: string; filename: string; content_type: string }>,
+  apiKey: string
+): Promise<{
   extractedText: string;
   receiptImages: Array<{
     filename: string;
@@ -44,34 +99,43 @@ async function processAttachments(attachments: EmailAttachment[]): Promise<{
   }> = [];
 
   for (const attachment of attachments) {
-    const buffer = Buffer.from(attachment.content, 'base64');
+    const isPDF = attachment.content_type === 'application/pdf';
+    const isImage = IMAGE_TYPES.includes(attachment.content_type);
 
-    if (buffer.length > MAX_ATTACHMENT_SIZE) {
-      console.warn(`Skipping oversized attachment: ${attachment.filename}`);
-      continue;
-    }
+    if (!isPDF && !isImage) continue;
 
-    // Extract text from PDFs
-    if (attachment.content_type === 'application/pdf') {
-      try {
-        const text = await extractTextFromPDF(buffer);
-        if (text.trim()) {
-          extractedText += `\n\n--- Attached PDF: ${attachment.filename} ---\n${text}`;
-        }
-      } catch (err) {
-        console.warn(`Failed to parse PDF attachment ${attachment.filename}:`, err);
+    try {
+      const meta = await fetchAttachmentMeta(emailId, attachment.id, apiKey);
+
+      if (meta.size > MAX_ATTACHMENT_SIZE) {
+        console.warn(`Skipping oversized attachment: ${attachment.filename}`);
+        continue;
       }
-    }
 
-    // Store images as receipts
-    if (IMAGE_TYPES.includes(attachment.content_type)) {
-      receiptImages.push({
-        filename: `email-${Date.now()}-${attachment.filename}`,
-        originalName: attachment.filename,
-        mimeType: attachment.content_type,
-        size: buffer.length,
-        data: attachment.content, // already base64
-      });
+      const buffer = await downloadAttachment(meta.download_url);
+
+      if (isPDF) {
+        try {
+          const text = await extractTextFromPDF(buffer);
+          if (text.trim()) {
+            extractedText += `\n\n--- Attached PDF: ${attachment.filename} ---\n${text}`;
+          }
+        } catch (err) {
+          console.warn(`Failed to parse PDF attachment ${attachment.filename}:`, err);
+        }
+      }
+
+      if (isImage) {
+        receiptImages.push({
+          filename: `email-${Date.now()}-${attachment.filename}`,
+          originalName: attachment.filename,
+          mimeType: attachment.content_type,
+          size: buffer.length,
+          data: buffer.toString('base64'),
+        });
+      }
+    } catch (err) {
+      console.warn(`Failed to process attachment ${attachment.filename}:`, err);
     }
   }
 
@@ -109,17 +173,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
-    // Extract email fields from Resend inbound payload
-    const data = (payload.data || payload) as Record<string, unknown>;
-    const senderEmail = (data.from as string) || '';
-    const subject = (data.subject as string) || '(no subject)';
-    let emailBody = (data.text as string) || (data.html as string) || '';
+    // Extract email_id from webhook payload and fetch full email via Resend API
+    const webhookData = (payload.data || payload) as Record<string, unknown>;
+    const emailId = webhookData.email_id as string;
+
+    if (!emailId) {
+      console.error('No email_id in webhook payload');
+      return NextResponse.json({ error: 'Missing email_id' }, { status: 400 });
+    }
+
+    const resendApiKey = process.env.EMAIL_SERVER_PASSWORD;
+    if (!resendApiKey) {
+      console.error('Resend API key not configured');
+      return NextResponse.json({ error: 'Resend API key not configured' }, { status: 500 });
+    }
+
+    const email = await fetchResendEmail(emailId, resendApiKey);
+
+    const senderEmail = email.from || '';
+    const subject = email.subject || '(no subject)';
+    let emailBody = email.text || email.html || '';
 
     // Process attachments (PDFs → text, images → receipts)
-    const rawAttachments = (data.attachments as EmailAttachment[]) || [];
-    const { extractedText, receiptImages } = await processAttachments(rawAttachments);
+    const { extractedText, receiptImages } = await processAttachments(
+      emailId,
+      email.attachments || [],
+      resendApiKey
+    );
 
-    // Append PDF text to email body so AI can parse it
     if (extractedText) {
       emailBody += extractedText;
     }
