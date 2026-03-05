@@ -4,6 +4,7 @@ import { Webhook } from 'svix';
 import { parseEmailToEstimate } from '@/lib/ai/parse-email';
 import { calculateEstimate } from '@/lib/pricing/calculator';
 import connectDB from '@/lib/db/mongodb';
+import Client from '@/lib/db/models/Client';
 import Estimate from '@/lib/db/models/Estimate';
 import User from '@/lib/db/models/User';
 import Settings from '@/lib/db/models/Settings';
@@ -241,12 +242,29 @@ export async function POST(request: NextRequest) {
       markupPercentage,
     });
 
+    // Find or create client
+    let client = await Client.findOne({
+      userId: user._id,
+      name: parsed.clientName,
+    });
+
+    if (!client) {
+      client = await Client.create({
+        userId: user._id,
+        name: parsed.clientName,
+        email: parsed.clientEmail,
+        phone: parsed.clientPhone,
+      });
+      console.log(`Client created: ${client._id} (${parsed.clientName})`);
+    }
+
     // Create draft estimate
     const estimate = await Estimate.create({
       userId: user._id,
+      clientId: client._id,
       clientName: parsed.clientName,
-      clientEmail: parsed.clientEmail,
-      clientPhone: parsed.clientPhone,
+      clientEmail: parsed.clientEmail || client.email,
+      clientPhone: parsed.clientPhone || client.phone,
       projectAddress: parsed.projectAddress,
       city: parsed.city,
       state: parsed.state,
