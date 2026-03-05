@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { Input, InputProps } from '@/components/ui/input';
 import { useGooglePlaces } from '@/hooks/useGooglePlaces';
 
@@ -24,38 +24,13 @@ export function AddressAutocomplete({
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const onChangeRef = useRef(onChange);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
   const { isLoaded } = useGooglePlaces();
 
-  const handlePlaceChanged = useCallback(() => {
-    const autocomplete = autocompleteRef.current;
-    if (!autocomplete) return;
-
-    const place = autocomplete.getPlace();
-    if (!place?.address_components) return;
-
-    let streetNumber = '';
-    let route = '';
-    let city = '';
-    let state = '';
-
-    for (const component of place.address_components) {
-      const type = component.types[0];
-      if (type === 'street_number') {
-        streetNumber = component.long_name;
-      } else if (type === 'route') {
-        route = component.long_name;
-      } else if (type === 'locality') {
-        city = component.long_name;
-      } else if (type === 'administrative_area_level_1') {
-        state = component.short_name;
-      }
-    }
-
-    const street = streetNumber ? `${streetNumber} ${route}` : route;
-
-    onChange(street);
-    onPlaceSelect?.({ street, city, state });
-  }, [onChange, onPlaceSelect]);
+  // Keep refs current without triggering effect re-runs
+  onChangeRef.current = onChange;
+  onPlaceSelectRef.current = onPlaceSelect;
 
   useEffect(() => {
     if (!isLoaded || !inputRef.current || autocompleteRef.current) return;
@@ -66,14 +41,41 @@ export function AddressAutocomplete({
       fields: ['address_components'],
     });
 
-    autocomplete.addListener('place_changed', handlePlaceChanged);
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      if (!place?.address_components) return;
+
+      let streetNumber = '';
+      let route = '';
+      let city = '';
+      let state = '';
+
+      for (const component of place.address_components) {
+        const type = component.types[0];
+        if (type === 'street_number') {
+          streetNumber = component.long_name;
+        } else if (type === 'route') {
+          route = component.long_name;
+        } else if (type === 'locality') {
+          city = component.long_name;
+        } else if (type === 'administrative_area_level_1') {
+          state = component.short_name;
+        }
+      }
+
+      const street = streetNumber ? `${streetNumber} ${route}` : route;
+
+      onChangeRef.current(street);
+      onPlaceSelectRef.current?.({ street, city, state });
+    });
+
     autocompleteRef.current = autocomplete;
 
     return () => {
       google.maps.event.clearInstanceListeners(autocomplete);
       autocompleteRef.current = null;
     };
-  }, [isLoaded, handlePlaceChanged]);
+  }, [isLoaded]);
 
   return (
     <Input
