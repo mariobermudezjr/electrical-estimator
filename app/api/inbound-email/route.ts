@@ -182,9 +182,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing email_id' }, { status: 400 });
     }
 
-    const resendApiKey = process.env.EMAIL_SERVER_PASSWORD;
+    const resendApiKey = process.env.RESEND_API_KEY || process.env.EMAIL_SERVER_PASSWORD;
     if (!resendApiKey) {
-      console.error('Resend API key not configured');
+      console.error('Resend API key not configured (set RESEND_API_KEY)');
       return NextResponse.json({ error: 'Resend API key not configured' }, { status: 500 });
     }
 
