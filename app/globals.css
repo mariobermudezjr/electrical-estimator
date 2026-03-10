@@ -223,6 +223,20 @@ button, a {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Force email HTML content to be readable on dark backgrounds */
+.email-body-content {
+  color: var(--text-primary) !important;
+}
+
+.email-body-content * {
+  color: inherit !important;
+  background-color: transparent !important;
+}
+
+.email-body-content a {
+  color: var(--accent-primary) !important;
+}
+
 .compose-editor .ql-snow .ql-tooltip input[type="text"] {
   background: var(--background-primary);
   border-color: var(--border-primary);

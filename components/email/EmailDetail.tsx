@@ -30,17 +30,6 @@ export function EmailDetail() {
     currentFolder,
   } = useEmailStore();
 
-  console.log('[EmailDetail] render:', {
-    selectedEmailId,
-    hasSelectedEmail: !!selectedEmail,
-    isLoadingDetail,
-    subject: selectedEmail?.subject,
-    hasText: !!selectedEmail?.text,
-    textLen: selectedEmail?.text?.length,
-    hasHtml: !!selectedEmail?.html,
-    htmlLen: selectedEmail?.html?.length,
-  });
-
   if (!selectedEmailId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background-primary">
@@ -233,15 +222,18 @@ export function EmailDetail() {
         {/* Body */}
         {email.html ? (
           <div
-            className="prose prose-invert prose-sm max-w-none text-text-primary
+            className="email-body-content prose prose-invert prose-sm max-w-none text-text-primary
               [&_a]:text-accent-primary [&_a]:underline
-              [&_blockquote]:border-l-2 [&_blockquote]:border-border-primary [&_blockquote]:pl-3 [&_blockquote]:text-text-tertiary"
+              [&_blockquote]:border-l-2 [&_blockquote]:border-border-primary [&_blockquote]:pl-3 [&_blockquote]:text-text-tertiary
+              [&_*]:!max-w-full [&_img]:!max-w-full"
             dangerouslySetInnerHTML={{ __html: email.html }}
           />
-        ) : (
+        ) : email.text ? (
           <pre className="whitespace-pre-wrap text-sm text-text-primary font-sans">
             {email.text}
           </pre>
+        ) : (
+          <p className="text-sm text-text-tertiary italic">No content</p>
         )}
 
         {/* Attachments */}

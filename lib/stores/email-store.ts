@@ -174,70 +174,32 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   },
 
   selectEmail: async (id) => {
-    console.log('[selectEmail] called with id:', id);
     if (!id) {
-      console.log('[selectEmail] clearing selection');
       set({ selectedEmailId: null, selectedEmail: null });
       return;
     }
 
     const { emails, currentFolder } = get();
     const email = emails.find((e) => e.id === id);
-    console.log('[selectEmail] list email found:', {
-      id: email?.id,
-      type: email?.type,
-      hasText: !!email?.text,
-      textLen: email?.text?.length,
-      hasHtml: !!email?.html,
-      htmlLen: email?.html?.length,
-      subject: email?.subject,
-    });
     set({ selectedEmailId: id, selectedEmail: email || null, isLoadingDetail: true });
 
     try {
-      // Fetch full email detail
       const isInbound = email?.type === 'inbound' ||
         currentFolder === 'inbox';
       const endpoint = isInbound
         ? `/api/email/inbound/${id}`
         : `/api/outbound-email/${id}`;
 
-      console.log('[selectEmail] fetching detail from:', endpoint);
       const res = await fetch(endpoint);
-      console.log('[selectEmail] detail response status:', res.status);
-      if (!res.ok) {
-        const errBody = await res.text();
-        console.error('[selectEmail] detail fetch failed:', res.status, errBody);
-        throw new Error('Failed to fetch email');
-      }
-      const json = await res.json();
-      const { data } = json;
-
-      console.log('[selectEmail] detail data:', {
-        id: data?.id,
-        hasText: !!data?.text,
-        textLen: data?.text?.length,
-        hasHtml: !!data?.html,
-        htmlLen: data?.html?.length,
-        subject: data?.subject,
-      });
+      if (!res.ok) throw new Error('Failed to fetch email');
+      const { data } = await res.json();
 
       // Only update if this email is still selected (avoid race conditions)
-      if (get().selectedEmailId !== id) {
-        console.log('[selectEmail] selection changed during fetch, aborting. Current:', get().selectedEmailId, 'Fetched:', id);
-        return;
-      }
+      if (get().selectedEmailId !== id) return;
 
       const fullEmail = isInbound
         ? normalizeInbound(data as InboundEmail)
         : normalizeOutbound(data as OutboundEmail);
-
-      console.log('[selectEmail] normalized fullEmail:', {
-        hasText: !!fullEmail.text,
-        textLen: fullEmail.text?.length,
-        hasHtml: !!fullEmail.html,
-        htmlLen: fullEmail.html?.length,
-      });
 
       // Merge: keep list data as fallback if detail fields are empty
       const merged: EmailMessage = {
@@ -248,18 +210,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         preview: fullEmail.preview || email?.preview || '',
       };
 
-      console.log('[selectEmail] merged result:', {
-        hasText: !!merged.text,
-        textLen: merged.text?.length,
-        hasHtml: !!merged.html,
-        htmlLen: merged.html?.length,
-      });
-
       set({ selectedEmail: merged, isLoadingDetail: false });
 
       // Mark as read if unread inbound
       if (isInbound && !data.isRead) {
-        console.log('[selectEmail] marking as read');
         fetch(`/api/email/inbound/${id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -276,8 +230,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           get().fetchCounts();
         });
       }
-    } catch (err) {
-      console.error('[selectEmail] error:', err);
+    } catch {
       // On error, keep the list version visible instead of clearing
       set({ isLoadingDetail: false });
     }
