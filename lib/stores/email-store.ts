@@ -8,8 +8,13 @@ import {
   OutboundEmail,
 } from '@/types/email';
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function normalizeInbound(e: InboundEmail): EmailMessage {
   const text = e.text || '';
+  const previewSource = text || (e.html ? stripHtml(e.html) : '');
   return {
     id: e.id,
     type: 'inbound',
@@ -21,7 +26,7 @@ function normalizeInbound(e: InboundEmail): EmailMessage {
     subject: e.subject,
     html: e.html,
     text: e.text,
-    preview: text.slice(0, 120).replace(/\n/g, ' '),
+    preview: previewSource.slice(0, 120).replace(/\n/g, ' '),
     attachments: e.attachments,
     isRead: e.isRead,
     isStarred: e.isStarred,
@@ -33,6 +38,7 @@ function normalizeInbound(e: InboundEmail): EmailMessage {
 
 function normalizeOutbound(e: OutboundEmail): EmailMessage {
   const text = e.text || '';
+  const previewSource = text || (e.html ? stripHtml(e.html) : '');
   return {
     id: e.id,
     type: 'outbound',
@@ -44,7 +50,7 @@ function normalizeOutbound(e: OutboundEmail): EmailMessage {
     subject: e.subject,
     html: e.html,
     text: e.text,
-    preview: text.slice(0, 120).replace(/\n/g, ' '),
+    preview: previewSource.slice(0, 120).replace(/\n/g, ' '),
     attachments: e.attachments,
     isRead: e.isRead ?? true,
     isStarred: e.isStarred ?? false,
@@ -189,11 +195,23 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       if (!res.ok) throw new Error('Failed to fetch email');
       const { data } = await res.json();
 
+      // Only update if this email is still selected (avoid race conditions)
+      if (get().selectedEmailId !== id) return;
+
       const fullEmail = isInbound
         ? normalizeInbound(data as InboundEmail)
         : normalizeOutbound(data as OutboundEmail);
 
-      set({ selectedEmail: fullEmail, isLoadingDetail: false });
+      // Merge: keep list data as fallback if detail fields are empty
+      const merged: EmailMessage = {
+        ...email,
+        ...fullEmail,
+        text: fullEmail.text || email?.text || '',
+        html: fullEmail.html || email?.html || '',
+        preview: fullEmail.preview || email?.preview || '',
+      };
+
+      set({ selectedEmail: merged, isLoadingDetail: false });
 
       // Mark as read if unread inbound
       if (isInbound && !data.isRead) {
@@ -214,6 +232,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         });
       }
     } catch {
+      // On error, keep the list version visible instead of clearing
       set({ isLoadingDetail: false });
     }
   },
