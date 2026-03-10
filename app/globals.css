@@ -153,3 +153,78 @@ button, a {
 .pac-icon {
   filter: invert(0.7);
 }
+
+/* React Quill dark theme overrides */
+.compose-editor .ql-toolbar.ql-snow {
+  border-color: var(--border-primary);
+  background: var(--background-secondary);
+}
+
+.compose-editor .ql-container.ql-snow {
+  border-color: var(--border-primary);
+  background: var(--background-elevated);
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.compose-editor .ql-editor {
+  color: var(--text-primary);
+  min-height: 200px;
+}
+
+.compose-editor .ql-editor.ql-blank::before {
+  color: var(--text-tertiary);
+  font-style: normal;
+}
+
+.compose-editor .ql-snow .ql-stroke {
+  stroke: var(--text-secondary);
+}
+
+.compose-editor .ql-snow .ql-fill,
+.compose-editor .ql-snow .ql-stroke.ql-fill {
+  fill: var(--text-secondary);
+}
+
+.compose-editor .ql-snow .ql-picker {
+  color: var(--text-secondary);
+}
+
+.compose-editor .ql-snow .ql-picker-options {
+  background: var(--background-elevated);
+  border-color: var(--border-primary);
+}
+
+.compose-editor .ql-snow .ql-picker-label:hover,
+.compose-editor .ql-snow .ql-picker-label.ql-active,
+.compose-editor .ql-snow .ql-picker-item:hover,
+.compose-editor .ql-snow .ql-picker-item.ql-selected {
+  color: var(--accent-primary);
+}
+
+.compose-editor .ql-snow button:hover .ql-stroke,
+.compose-editor .ql-snow button.ql-active .ql-stroke {
+  stroke: var(--accent-primary);
+}
+
+.compose-editor .ql-snow button:hover .ql-fill,
+.compose-editor .ql-snow button.ql-active .ql-fill {
+  fill: var(--accent-primary);
+}
+
+.compose-editor .ql-snow .ql-tooltip {
+  background: var(--background-elevated);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.compose-editor .ql-snow .ql-tooltip input[type="text"] {
+  background: var(--background-primary);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}

@@ -6,6 +6,7 @@ import { calculateEstimate } from '@/lib/pricing/calculator';
 import connectDB from '@/lib/db/mongodb';
 import Client from '@/lib/db/models/Client';
 import Estimate from '@/lib/db/models/Estimate';
+import InboundEmail from '@/lib/db/models/InboundEmail';
 import User from '@/lib/db/models/User';
 import Settings from '@/lib/db/models/Settings';
 
@@ -226,6 +227,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Owner user not found' }, { status: 500 });
     }
 
+    // Save raw inbound email to InboundEmail collection for the mail UI
+    const inboundAttachments = (email.attachments || []).map((a: { id: string; filename: string; content_type: string }) => ({
+      filename: a.filename,
+      originalName: a.filename,
+      mimeType: a.content_type,
+      size: 0,
+      data: '',
+    }));
+
+    // Extract sender name from "Name <email>" format
+    const fromMatch = senderEmail.match(/^(.+?)\s*<(.+?)>$/);
+    const fromName = fromMatch ? fromMatch[1].trim() : undefined;
+    const fromAddr = fromMatch ? fromMatch[2].trim() : senderEmail;
+
+    const savedInboundEmail = await InboundEmail.create({
+      userId: user._id,
+      folder: 'inbox',
+      resendEmailId: emailId,
+      from: fromAddr,
+      fromName,
+      to: email.to || [],
+      subject,
+      html: email.html || undefined,
+      text: email.text || undefined,
+      attachments: inboundAttachments,
+      isRead: false,
+      isStarred: false,
+      receivedAt: new Date(),
+    });
+
+    console.log(`Inbound email saved: ${savedInboundEmail._id} from ${senderEmail}`);
+
+    // Only auto-create estimates from the authorized sender
+    const authorizedEstimateSender = process.env.INBOUND_ESTIMATE_SENDER_EMAIL || 'mbermudez91@gmail.com';
+    const senderLower = fromAddr.toLowerCase();
+    if (senderLower !== authorizedEstimateSender.toLowerCase()) {
+      console.log(`Inbound email from ${fromAddr} saved to inbox (not from authorized estimate sender, skipping auto-estimate)`);
+      return NextResponse.json({ success: true, emailId: savedInboundEmail._id, skippedEstimate: true }, { status: 200 });
+    }
+
     // Get user's default settings
     const settings = await Settings.findOne({ userId: user._id });
     const hourlyRate = settings?.defaultHourlyRate ?? 75;
@@ -275,6 +316,10 @@ export async function POST(request: NextRequest) {
       notes: `Auto-created from email by ${senderEmail}`,
       ...(receiptImages.length > 0 && { receipts: receiptImages }),
     });
+
+    // Link the estimate back to the inbound email
+    savedInboundEmail.estimateId = estimate._id;
+    await savedInboundEmail.save();
 
     console.log(`Draft estimate created: ${estimate._id} from ${senderEmail}`);
 

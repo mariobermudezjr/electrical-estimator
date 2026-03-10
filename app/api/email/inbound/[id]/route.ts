@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
-import OutboundEmail, { EmailFolder } from '@/lib/db/models/OutboundEmail';
+import InboundEmail from '@/lib/db/models/InboundEmail';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
-// GET /api/outbound-email/[id] - Get single email
+// GET /api/email/inbound/[id] - Get single inbound email (full body)
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,19 +14,19 @@ export async function GET(
 
     await connectDB();
 
-    const email = await OutboundEmail.findOne({ _id: id, userId });
+    const email = await InboundEmail.findOne({ _id: id, userId });
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, data: email.toJSON() });
   } catch (error) {
-    console.error('GET /api/outbound-email/[id] error:', error);
+    console.error('GET /api/email/inbound/[id] error:', error);
     return NextResponse.json({ error: 'Failed to fetch email' }, { status: 500 });
   }
 }
 
-// PATCH /api/outbound-email/[id] - Update email (move folder, edit draft)
+// PATCH /api/email/inbound/[id] - Update folder, isRead, isStarred
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -38,28 +38,12 @@ export async function PATCH(
 
     await connectDB();
 
-    const email = await OutboundEmail.findOne({ _id: id, userId });
+    const email = await InboundEmail.findOne({ _id: id, userId });
     if (!email) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
-    // Allow folder moves and star/read toggles on any email, but block content edits on sent emails
-    const isMetadataOnly = Object.keys(body).every((k) =>
-      ['folder', 'isRead', 'isStarred'].includes(k)
-    );
-    if (email.folder === 'sent' && !isMetadataOnly) {
-      return NextResponse.json({ error: 'Cannot edit sent emails' }, { status: 400 });
-    }
-
-    if (body.from !== undefined) email.from = body.from;
-    if (body.to !== undefined) email.to = Array.isArray(body.to) ? body.to : [body.to];
-    if (body.cc !== undefined) email.cc = body.cc;
-    if (body.bcc !== undefined) email.bcc = body.bcc;
-    if (body.subject !== undefined) email.subject = body.subject;
-    if (body.html !== undefined) email.html = body.html;
-    if (body.text !== undefined) email.text = body.text;
     if (body.folder !== undefined) email.folder = body.folder;
-    if (body.attachments !== undefined) email.attachments = body.attachments;
     if (body.isRead !== undefined) email.isRead = body.isRead;
     if (body.isStarred !== undefined) email.isStarred = body.isStarred;
 
@@ -67,12 +51,12 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, data: email.toJSON() });
   } catch (error) {
-    console.error('PATCH /api/outbound-email/[id] error:', error);
+    console.error('PATCH /api/email/inbound/[id] error:', error);
     return NextResponse.json({ error: 'Failed to update email' }, { status: 500 });
   }
 }
 
-// DELETE /api/outbound-email/[id] - Permanently delete
+// DELETE /api/email/inbound/[id] - Permanently delete
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -83,14 +67,14 @@ export async function DELETE(
 
     await connectDB();
 
-    const result = await OutboundEmail.deleteOne({ _id: id, userId });
+    const result = await InboundEmail.deleteOne({ _id: id, userId });
     if (result.deletedCount === 0) {
       return NextResponse.json({ error: 'Email not found' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('DELETE /api/outbound-email/[id] error:', error);
+    console.error('DELETE /api/email/inbound/[id] error:', error);
     return NextResponse.json({ error: 'Failed to delete email' }, { status: 500 });
   }
 }

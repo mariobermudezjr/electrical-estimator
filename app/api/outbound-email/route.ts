@@ -11,9 +11,21 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    const emails = await OutboundEmail.find({ userId, folder })
+    const search = request.nextUrl.searchParams.get('search') || '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: any = { userId, folder };
+    if (search) {
+      query.$or = [
+        { subject: { $regex: search, $options: 'i' } },
+        { 'to': { $regex: search, $options: 'i' } },
+        { text: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const emails = await OutboundEmail.find(query)
       .select({ 'attachments.data': 0 })
       .sort({ createdAt: -1 })
+      .limit(100)
       .lean();
 
     const transformed = emails.map((e) => ({

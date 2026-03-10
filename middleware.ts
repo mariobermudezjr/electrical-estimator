@@ -42,5 +42,8 @@ export const config = {
     '/api/ai/:path*',
     '/api/templates/:path*',
     '/api/import/:path*',
+    '/email',
+    '/api/email/:path*',
+    '/api/outbound-email/:path*',
   ],
 };

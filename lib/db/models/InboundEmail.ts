@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export type EmailFolder = 'draft' | 'queued' | 'sent' | 'deleted' | 'archive';
+export type InboxFolder = 'inbox' | 'archive' | 'deleted';
 
-export interface IAttachment {
+export interface IInboundAttachment {
   filename: string;
   originalName: string;
   mimeType: string;
@@ -10,36 +10,38 @@ export interface IAttachment {
   data: string; // base64
 }
 
-export interface IOutboundEmail extends Document {
+export interface IInboundEmail extends Document {
   userId: mongoose.Types.ObjectId | string;
-  folder: EmailFolder;
+  folder: InboxFolder;
+  resendEmailId?: string;
   from: string;
+  fromName?: string;
   to: string[];
   cc?: string[];
-  bcc?: string[];
   subject: string;
   html?: string;
   text?: string;
-  attachments: IAttachment[];
+  attachments: IInboundAttachment[];
   isRead: boolean;
   isStarred: boolean;
+  receivedAt: Date;
   estimateId?: mongoose.Types.ObjectId | string;
-  resendId?: string;
-  sentAt?: Date;
-  errorMessage?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const AttachmentSchema = new Schema({
-  filename: { type: String, required: true },
-  originalName: { type: String, required: true },
-  mimeType: { type: String, required: true },
-  size: { type: Number, required: true },
-  data: { type: String, required: true },
-}, { _id: false });
+const InboundAttachmentSchema = new Schema(
+  {
+    filename: { type: String, required: true },
+    originalName: { type: String, required: true },
+    mimeType: { type: String, required: true },
+    size: { type: Number, required: true },
+    data: { type: String, required: true },
+  },
+  { _id: false }
+);
 
-const OutboundEmailSchema = new Schema<IOutboundEmail>(
+const InboundEmailSchema = new Schema<IInboundEmail>(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -49,27 +51,26 @@ const OutboundEmailSchema = new Schema<IOutboundEmail>(
     },
     folder: {
       type: String,
-      enum: ['draft', 'queued', 'sent', 'deleted', 'archive'],
-      default: 'draft',
+      enum: ['inbox', 'archive', 'deleted'],
+      default: 'inbox',
       required: true,
     },
+    resendEmailId: { type: String },
     from: { type: String, required: true, trim: true },
+    fromName: { type: String, trim: true },
     to: [{ type: String, required: true, trim: true }],
     cc: [{ type: String, trim: true }],
-    bcc: [{ type: String, trim: true }],
     subject: { type: String, required: true, trim: true },
     html: { type: String },
     text: { type: String },
-    attachments: [AttachmentSchema],
-    isRead: { type: Boolean, default: true },
+    attachments: [InboundAttachmentSchema],
+    isRead: { type: Boolean, default: false },
     isStarred: { type: Boolean, default: false },
+    receivedAt: { type: Date, required: true },
     estimateId: {
       type: Schema.Types.ObjectId,
       ref: 'Estimate',
     },
-    resendId: { type: String },
-    sentAt: { type: Date },
-    errorMessage: { type: String },
   },
   {
     timestamps: true,
@@ -82,9 +83,11 @@ const OutboundEmailSchema = new Schema<IOutboundEmail>(
   }
 );
 
-OutboundEmailSchema.index({ userId: 1, folder: 1, createdAt: -1 });
+InboundEmailSchema.index({ userId: 1, folder: 1, receivedAt: -1 });
+InboundEmailSchema.index({ userId: 1, isRead: 1 });
 
-const OutboundEmail: Model<IOutboundEmail> =
-  mongoose.models.OutboundEmail || mongoose.model<IOutboundEmail>('OutboundEmail', OutboundEmailSchema);
+const InboundEmail: Model<IInboundEmail> =
+  mongoose.models.InboundEmail ||
+  mongoose.model<IInboundEmail>('InboundEmail', InboundEmailSchema);
 
-export default OutboundEmail;
+export default InboundEmail;
