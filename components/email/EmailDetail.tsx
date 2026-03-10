@@ -30,6 +30,17 @@ export function EmailDetail() {
     currentFolder,
   } = useEmailStore();
 
+  console.log('[EmailDetail] render:', {
+    selectedEmailId,
+    hasSelectedEmail: !!selectedEmail,
+    isLoadingDetail,
+    subject: selectedEmail?.subject,
+    hasText: !!selectedEmail?.text,
+    textLen: selectedEmail?.text?.length,
+    hasHtml: !!selectedEmail?.html,
+    htmlLen: selectedEmail?.html?.length,
+  });
+
   if (!selectedEmailId) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background-primary">
