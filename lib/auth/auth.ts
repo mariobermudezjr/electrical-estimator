@@ -34,6 +34,16 @@ export const authConfig: NextAuthConfig = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
+    async signIn({ user }) {
+      const allowedEmails = (process.env.ALLOWED_EMAILS || 'mbermudez91@gmail.com')
+        .split(',')
+        .map((e) => e.trim().toLowerCase());
+      const email = user.email?.toLowerCase();
+      if (!email || !allowedEmails.includes(email)) {
+        return false;
+      }
+      return true;
+    },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.sub as string;
