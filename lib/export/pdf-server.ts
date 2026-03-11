@@ -118,11 +118,17 @@ export async function generateEstimatePDFServer(
     // Header row
     doc.rect(leftMargin, y, contentWidth, 20).fill(COLOR_PRIMARY);
     doc.fontSize(9).fillColor('#FFFFFF');
-    doc.text('Description', colX[0] + 4, y + 5, { width: colWidths[0] - 8 });
-    doc.text('Quantity', colX[1] + 4, y + 5, { width: colWidths[1] - 8 });
-    doc.text('Rate', colX[2] + 4, y + 5, { width: colWidths[2] - 8 });
-    doc.text('Amount', colX[3] + 4, y + 5, { width: colWidths[3] - 8, align: 'right' });
+    doc.text('Description', colX[0] + 4, y + 5, { width: colWidths[0] - 8, lineBreak: false });
+    doc.text('Quantity', colX[1] + 4, y + 5, { width: colWidths[1] - 8, lineBreak: false });
+    doc.text('Rate', colX[2] + 4, y + 5, { width: colWidths[2] - 8, lineBreak: false });
+    doc.text('Amount', colX[3] + 4, y + 5, { width: colWidths[3] - 8, align: 'right', lineBreak: false });
     y += 20;
+
+    // Truncate text to fit within a column width
+    const truncate = (text: string, maxChars: number): string => {
+      if (text.length <= maxChars) return text;
+      return text.slice(0, maxChars - 3) + '...';
+    };
 
     // Table rows
     const rows: string[][] = [];
@@ -135,10 +141,10 @@ export async function generateEstimatePDFServer(
       `$${estimate.pricing.labor.total.toFixed(2)}`,
     ]);
 
-    // Material rows
+    // Material rows — truncate long descriptions
     for (const item of estimate.pricing.materials.items) {
       rows.push([
-        item.description || 'Material',
+        truncate(item.description || 'Material', 45),
         item.quantity.toString(),
         `$${item.unitCost.toFixed(2)}`,
         `$${item.total.toFixed(2)}`,
@@ -171,10 +177,10 @@ export async function generateEstimatePDFServer(
       const fontSize = isTotal ? 11 : 9;
       const fontStyle = isLast3 ? 'Helvetica-Bold' : 'Helvetica';
       doc.font(fontStyle).fontSize(fontSize).fillColor(COLOR_DARK);
-      doc.text(row[0], colX[0] + 4, y + 4, { width: colWidths[0] - 8 });
-      doc.text(row[1], colX[1] + 4, y + 4, { width: colWidths[1] - 8 });
-      doc.text(row[2], colX[2] + 4, y + 4, { width: colWidths[2] - 8 });
-      doc.text(row[3], colX[3] + 4, y + 4, { width: colWidths[3] - 8, align: 'right' });
+      doc.text(row[0], colX[0] + 4, y + 4, { width: colWidths[0] - 8, lineBreak: false });
+      doc.text(row[1], colX[1] + 4, y + 4, { width: colWidths[1] - 8, lineBreak: false });
+      doc.text(row[2], colX[2] + 4, y + 4, { width: colWidths[2] - 8, lineBreak: false });
+      doc.text(row[3], colX[3] + 4, y + 4, { width: colWidths[3] - 8, align: 'right', lineBreak: false });
       y += rowHeight;
     }
 
