@@ -39,9 +39,10 @@ export function JobFormModal() {
           setClientPhone(job.clientPhone || '');
           setTitle(job.title);
           setDescription(job.description || '');
+          // Parse as UTC to avoid timezone shift (dates are stored as UTC midnight)
           const d = new Date(job.scheduledDate);
           setScheduledDate(
-            `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+            `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
           );
           setStartTime(job.startTime);
           setEndTime(job.endTime);

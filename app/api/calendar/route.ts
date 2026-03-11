@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       clientPhone: body.clientPhone,
       title: body.title,
       description: body.description,
-      scheduledDate: new Date(body.scheduledDate),
+      scheduledDate: new Date(body.scheduledDate + 'T12:00:00.000Z'),
       startTime: body.startTime,
       endTime: body.endTime,
       location: body.location,

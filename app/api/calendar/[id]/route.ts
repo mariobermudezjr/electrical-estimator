@@ -52,7 +52,7 @@ export async function PATCH(
       if (body[field] !== undefined) {
         if (field === 'scheduledDate') {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (job as any)[field] = new Date(body[field]);
+          (job as any)[field] = new Date(body[field] + 'T12:00:00.000Z');
         } else {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (job as any)[field] = body[field];

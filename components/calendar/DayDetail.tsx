@@ -42,7 +42,7 @@ export function DayDetail() {
 
   const dayJobs = jobs.filter((j) => {
     const jDate = new Date(j.scheduledDate);
-    const jStr = `${jDate.getFullYear()}-${String(jDate.getMonth() + 1).padStart(2, '0')}-${String(jDate.getDate()).padStart(2, '0')}`;
+    const jStr = `${jDate.getUTCFullYear()}-${String(jDate.getUTCMonth() + 1).padStart(2, '0')}-${String(jDate.getUTCDate()).padStart(2, '0')}`;
     return jStr === selectedDate;
   });
 
