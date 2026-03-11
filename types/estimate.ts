@@ -87,6 +87,7 @@ export interface Estimate {
   createdAt: Date;
   updatedAt: Date;
   notes?: string;
+  noteImages?: ReceiptImage[];
   receipts?: ReceiptImage[];
   payments?: Payment[];
 }

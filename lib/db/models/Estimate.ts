@@ -127,6 +127,7 @@ const EstimateSchema = new Schema<IEstimate>(
       required: true
     },
     notes: { type: String },
+    noteImages: [ReceiptImageSchema],
     receipts: [ReceiptImageSchema],
     payments: [PaymentSchema]
   },

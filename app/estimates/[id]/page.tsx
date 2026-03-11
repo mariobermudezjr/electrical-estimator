@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import Image from 'next/image';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown, DollarSign, Plus } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown, DollarSign, Plus, ImageIcon, Save } from 'lucide-react';
 import { ReceiptImage, Payment } from '@/types/estimate';
 
 export default function EstimateViewPage() {
@@ -34,6 +34,13 @@ export default function EstimateViewPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [paymentNote, setPaymentNote] = useState('');
   const [addingPayment, setAddingPayment] = useState(false);
+  const [noteImages, setNoteImages] = useState<ReceiptImage[]>([]);
+  const [uploadingNoteImage, setUploadingNoteImage] = useState(false);
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [noteImagePreview, setNoteImagePreview] = useState<string | null>(null);
+  const noteImageInputRef = useRef<HTMLInputElement>(null);
 
   const estimate = getEstimate(params.id as string);
 
@@ -50,10 +57,24 @@ export default function EstimateViewPage() {
     }
   }, [params.id]);
 
+  const fetchNoteImages = useCallback(async () => {
+    if (!params.id) return;
+    try {
+      const res = await fetch(`/api/estimates/${params.id}/note-images`);
+      if (res.ok) {
+        const { data } = await res.json();
+        setNoteImages(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch note images:', err);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     fetchReceipts();
+    fetchNoteImages();
     fetchSettings().catch(() => {});
-  }, [fetchReceipts, fetchSettings]);
+  }, [fetchReceipts, fetchNoteImages, fetchSettings]);
 
   // Close export dropdown on outside click
   useEffect(() => {
@@ -289,6 +310,56 @@ export default function EstimateViewPage() {
       await fetchEstimates();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to remove payment');
+    }
+  };
+
+  const handleUploadNoteImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingNoteImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`/api/estimates/${estimate.id}/note-images`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to upload image');
+      }
+      await fetchNoteImages();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to upload image');
+    } finally {
+      setUploadingNoteImage(false);
+      if (noteImageInputRef.current) noteImageInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteNoteImage = async (filename: string) => {
+    if (!confirm('Delete this image?')) return;
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/note-images/${filename}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete image');
+      setNoteImages((prev) => prev.filter((img) => img.filename !== filename));
+      if (noteImagePreview === filename) setNoteImagePreview(null);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to delete image');
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    try {
+      await updateEstimate(estimate.id, { notes: notesText });
+      setEditingNotes(false);
+    } catch {
+      alert('Failed to save notes');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -733,6 +804,95 @@ export default function EstimateViewPage() {
             </CardContent>
           </Card>
 
+          {/* Notes & Photos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Notes & Photos</CardTitle>
+                  <CardDescription>Job site photos, reference images, and sketches</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!editingNotes ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => { setNotesText(estimate.notes || ''); setEditingNotes(true); }}
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1.5" />
+                      {estimate.notes ? 'Edit Notes' : 'Add Notes'}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => setEditingNotes(false)}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" variant="success" onClick={handleSaveNotes} disabled={savingNotes}>
+                        <Save className="w-3.5 h-3.5 mr-1.5" />
+                        {savingNotes ? 'Saving...' : 'Save'}
+                      </Button>
+                    </>
+                  )}
+                  <input
+                    ref={noteImageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png"
+                    className="hidden"
+                    onChange={handleUploadNoteImage}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={uploadingNoteImage}
+                    onClick={() => noteImageInputRef.current?.click()}
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
+                    {uploadingNoteImage ? 'Uploading...' : 'Add Photo'}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Notes Text */}
+              {editingNotes ? (
+                <textarea
+                  value={notesText}
+                  onChange={(e) => setNotesText(e.target.value)}
+                  placeholder="Add notes about the job site, special conditions, client requests..."
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm bg-background-elevated border border-border-primary rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent-primary mb-4 resize-y"
+                />
+              ) : estimate.notes ? (
+                <p className="text-sm text-text-primary whitespace-pre-wrap mb-4">{estimate.notes}</p>
+              ) : null}
+
+              {/* Photo Gallery */}
+              {noteImages.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="text-xs font-medium text-text-secondary uppercase tracking-wider">
+                    Photos ({noteImages.length})
+                  </h4>
+                  <div className="grid grid-cols-4 gap-3">
+                    {noteImages.map((img) => (
+                      <NoteImageThumb
+                        key={img.filename}
+                        estimateId={estimate.id}
+                        image={img}
+                        isPreview={noteImagePreview === img.filename}
+                        onPreview={() => setNoteImagePreview(noteImagePreview === img.filename ? null : img.filename)}
+                        onDelete={() => handleDeleteNoteImage(img.filename)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : !estimate.notes && !editingNotes ? (
+                <p className="text-sm text-text-tertiary text-center py-4">
+                  No notes or photos yet.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+
           {/* Receipts */}
           <Card>
             <CardHeader>
@@ -795,6 +955,77 @@ export default function EstimateViewPage() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Thumbnail component for note images with lazy-load preview
+function NoteImageThumb({
+  estimateId,
+  image,
+  isPreview,
+  onPreview,
+  onDelete,
+}: {
+  estimateId: string;
+  image: ReceiptImage;
+  isPreview: boolean;
+  onPreview: () => void;
+  onDelete: () => void;
+}) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadImage = async () => {
+    if (src) { onPreview(); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimateId}/note-images/${image.filename}`);
+      if (res.ok) {
+        const { data } = await res.json();
+        setSrc(data);
+        onPreview();
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={loadImage}
+        className="w-full aspect-square bg-background-elevated rounded-lg border border-border-primary overflow-hidden flex items-center justify-center hover:border-accent-primary transition-colors"
+      >
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={src} alt={image.originalName} className="w-full h-full object-cover" />
+        ) : (
+          <div className="text-center p-2">
+            <ImageIcon className="w-6 h-6 text-text-tertiary mx-auto mb-1" />
+            <span className="text-[10px] text-text-tertiary block truncate max-w-full">
+              {loading ? 'Loading...' : image.originalName}
+            </span>
+          </div>
+        )}
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-accent-danger text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Delete"
+      >
+        <X className="w-3 h-3" />
+      </button>
+      {/* Expanded preview */}
+      {isPreview && src && (
+        <div className="absolute z-10 left-0 top-full mt-2 bg-background-elevated border border-border-primary rounded-lg shadow-xl p-2 w-80">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt={image.originalName} className="w-full rounded" />
+          <p className="text-xs text-text-tertiary mt-1 truncate">{image.originalName}</p>
+        </div>
+      )}
     </div>
   );
 }
