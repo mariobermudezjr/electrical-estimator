@@ -18,7 +18,7 @@ interface CalendarStore {
   selectDate: (date: string | null) => void;
   selectJob: (job: ScheduledJob | null) => void;
   createJob: (data: ScheduledJobFormData) => Promise<void>;
-  updateJob: (id: string, data: Partial<ScheduledJobFormData & { status: string }>) => Promise<void>;
+  updateJob: (id: string, data: Partial<ScheduledJobFormData & { status: string }>, sendNotification?: boolean) => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
   sendReminder: (id: string) => Promise<void>;
   openForm: (editId?: string) => void;
@@ -84,11 +84,11 @@ export const useCalendarStore = create<CalendarStore>((set, get) => ({
     get().fetchJobs();
   },
 
-  updateJob: async (id, data) => {
+  updateJob: async (id, data, sendNotification?: boolean) => {
     const res = await fetch(`/api/calendar/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, sendNotification }),
     });
     if (!res.ok) {
       const err = await res.json();

@@ -24,6 +24,7 @@ export function JobFormModal() {
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [estimateId, setEstimateId] = useState('');
+  const [notifyClient, setNotifyClient] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -107,7 +108,7 @@ export function JobFormModal() {
       };
 
       if (formEditId) {
-        await updateJob(formEditId, data);
+        await updateJob(formEditId, data, notifyClient);
       } else {
         await createJob(data);
       }
@@ -220,6 +221,23 @@ export function JobFormModal() {
             />
           </div>
         </div>
+
+        {/* Notify client checkbox (edit mode only) */}
+        {formEditId && clientEmail && (
+          <div className="px-4 py-2 border-t border-border-secondary">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={notifyClient}
+                onChange={(e) => setNotifyClient(e.target.checked)}
+                className="rounded border-border-primary bg-background-elevated text-accent-primary focus:ring-accent-primary"
+              />
+              <span className="text-xs text-text-secondary">
+                Send schedule update email to {clientEmail}
+              </span>
+            </label>
+          </div>
+        )}
 
         {/* Error */}
         {error && <div className="px-4 py-2 text-xs text-accent-danger">{error}</div>}
