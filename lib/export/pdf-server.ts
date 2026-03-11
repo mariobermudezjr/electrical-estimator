@@ -153,32 +153,28 @@ export async function generateEstimatePDFServer(
       ]);
     }
 
-    // Summary rows
-    rows.push(['', '', 'Subtotal:', `$${estimate.pricing.subtotal.toFixed(2)}`]);
-    rows.push(['', '', "Overhead and Contractor's fee:", `$${estimate.pricing.markupAmount.toFixed(2)}`]);
-    rows.push(['', '', 'TOTAL:', `$${estimate.pricing.total.toFixed(2)}`]);
+    // Summary rows (handled separately — label spans columns 0-2)
+    const summaryRows = [
+      ['Subtotal:', `$${estimate.pricing.subtotal.toFixed(2)}`],
+      ["Overhead and Contractor's Fee:", `$${estimate.pricing.markupAmount.toFixed(2)}`],
+      ['TOTAL:', `$${estimate.pricing.total.toFixed(2)}`],
+    ];
 
     const rowHeight = 18;
+
+    // Data rows
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const isLast3 = i >= rows.length - 3;
-      const isTotal = i === rows.length - 1;
 
-      // Row background
-      if (isTotal) {
-        doc.rect(leftMargin, y, contentWidth, rowHeight).fill('#E6F0FF');
-      } else if (isLast3) {
-        doc.rect(leftMargin, y, contentWidth, rowHeight).fill('#F0F2F5');
-      } else if (i % 2 === 1) {
+      // Alternating row background
+      if (i % 2 === 1) {
         doc.rect(leftMargin, y, contentWidth, rowHeight).fill('#F9F9F9');
       }
 
       // Grid lines
       doc.rect(leftMargin, y, contentWidth, rowHeight).stroke('#E0E0E0');
 
-      const fontSize = isTotal ? 11 : 9;
-      const fontStyle = isLast3 ? 'Helvetica-Bold' : 'Helvetica';
-      doc.font(fontStyle).fontSize(fontSize).fillColor(COLOR_DARK);
+      doc.font('Helvetica').fontSize(9).fillColor(COLOR_DARK);
       doc.text(row[0], colX[0] + 4, y + 4, { width: colWidths[0] - 8, lineBreak: false });
       doc.text(row[1], colX[1] + 4, y + 4, { width: colWidths[1] - 8, lineBreak: false });
       doc.text(row[2], colX[2] + 4, y + 4, { width: colWidths[2] - 8, lineBreak: false });
@@ -186,13 +182,37 @@ export async function generateEstimatePDFServer(
       y += rowHeight;
     }
 
+    // Summary rows — label spans first 3 columns, amount in last column
+    const labelWidth = colWidths[0] + colWidths[1] + colWidths[2];
+    for (let i = 0; i < summaryRows.length; i++) {
+      const [label, amount] = summaryRows[i];
+      const isTotal = i === summaryRows.length - 1;
+
+      // Row background
+      if (isTotal) {
+        doc.rect(leftMargin, y, contentWidth, rowHeight).fill('#E6F0FF');
+      } else {
+        doc.rect(leftMargin, y, contentWidth, rowHeight).fill('#F0F2F5');
+      }
+
+      // Grid lines
+      doc.rect(leftMargin, y, contentWidth, rowHeight).stroke('#E0E0E0');
+
+      const fontSize = isTotal ? 11 : 9;
+      doc.font('Helvetica-Bold').fontSize(fontSize).fillColor(COLOR_DARK);
+      doc.text(label, leftMargin + 4, y + 4, { width: labelWidth - 8, align: 'right', lineBreak: false });
+      doc.text(amount, colX[3] + 4, y + 4, { width: colWidths[3] - 8, align: 'right', lineBreak: false });
+      y += rowHeight;
+    }
+
     // Reset font
     doc.font('Helvetica');
 
-    // --- Footer Disclaimer ---
+    // --- Footer Disclaimer (pinned to bottom of page) ---
+    const pageHeight = 792; // letter height in points
     const disclaimer = 'This cost estimate is provided for budget purposes only. Final pricing is subject to finalized scope, site conditions, and official quotation. This estimate is valid for 30 days from the date above.';
     doc.fontSize(7).fillColor(COLOR_GRAY);
-    doc.text(disclaimer, leftMargin, 700, { width: contentWidth });
+    doc.text(disclaimer, leftMargin, pageHeight - 40, { width: contentWidth });
 
     doc.end();
   });
