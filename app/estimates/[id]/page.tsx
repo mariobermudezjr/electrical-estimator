@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import Image from 'next/image';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail } from 'lucide-react';
 import { ReceiptImage } from '@/types/estimate';
 
 export default function EstimateViewPage() {
@@ -26,6 +26,7 @@ export default function EstimateViewPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   const estimate = getEstimate(params.id as string);
 
@@ -191,6 +192,108 @@ export default function EstimateViewPage() {
     downloadExcel(blob, filename);
   };
 
+  const handleSendToClient = async () => {
+    if (!estimate.clientEmail) {
+      alert('No client email address on this estimate. Please edit the estimate and add one.');
+      return;
+    }
+
+    const confirmed = confirm(
+      `Send estimate to ${estimate.clientName} (${estimate.clientEmail})?\n\nThis will email the estimate PDF and update the status to "sent".`
+    );
+    if (!confirmed) return;
+
+    setSendingEmail(true);
+    try {
+      // Generate the estimate PDF
+      let receiptDataUrls: string[] = [];
+      if (receipts.length > 0) {
+        const results = await Promise.all(
+          receipts.map(async (r) => {
+            const res = await fetch(`/api/estimates/${estimate.id}/receipts/${r.filename}`);
+            if (res.ok) {
+              const { data } = await res.json();
+              return data as string;
+            }
+            return null;
+          })
+        );
+        receiptDataUrls = results.filter((r): r is string => r !== null);
+      }
+      const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
+      const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls, logoDataUrl);
+
+      // Convert blob to base64
+      const buffer = await blob.arrayBuffer();
+      const base64 = btoa(
+        new Uint8Array(buffer).reduce((d, byte) => d + String.fromCharCode(byte), '')
+      );
+
+      const location = `${estimate.projectAddress}, ${estimate.city}${estimate.state ? `, ${estimate.state}` : ''}`;
+      const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
+
+      // Create draft
+      const createRes = await fetch('/api/outbound-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'estimates@charlieselectric.online',
+          to: [estimate.clientEmail],
+          bcc: ['mbermudez91@gmail.com'],
+          subject: `Estimate for ${estimate.scopeOfWork.slice(0, 60)} — ${location}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px;">
+              <h2 style="color: #333;">Estimate from Charlie's Electric</h2>
+              <p>Hi ${estimate.clientName},</p>
+              <p>Thank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at <strong>${location}</strong>.</p>
+              <h3 style="color: #555;">Scope of Work</h3>
+              <p>${estimate.scopeOfWork.replace(/\n/g, '<br/>')}</p>
+              <h3 style="color: #555;">Estimate Total: $${estimate.pricing.total.toFixed(2)}</h3>
+              <p>This estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.</p>
+              <p>Best regards,<br/>Mario Bermudez Jr.<br/>Charlie's Electric<br/>562.500.3126</p>
+            </div>
+          `,
+          text: `Hi ${estimate.clientName},\n\nThank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at ${location}.\n\nScope of Work:\n${estimate.scopeOfWork}\n\nEstimate Total: $${estimate.pricing.total.toFixed(2)}\n\nThis estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.\n\nBest regards,\nMario Bermudez Jr.\nCharlie's Electric\n562.500.3126`,
+          attachments: [{
+            filename,
+            originalName: filename,
+            mimeType: 'application/pdf',
+            size: blob.size,
+            data: base64,
+          }],
+          estimateId: estimate.id,
+        }),
+      });
+
+      if (!createRes.ok) {
+        const err = await createRes.json();
+        throw new Error(err.error || 'Failed to create email');
+      }
+
+      const { data: draft } = await createRes.json();
+
+      // Send it
+      const sendRes = await fetch(`/api/outbound-email/${draft.id}/send`, {
+        method: 'POST',
+      });
+
+      if (!sendRes.ok) {
+        const err = await sendRes.json();
+        throw new Error(err.error || 'Failed to send email');
+      }
+
+      // Update estimate status to sent
+      await updateEstimate(estimate.id, { status: 'sent' });
+
+      alert(`Estimate sent to ${estimate.clientEmail}`);
+    } catch (error) {
+      console.error('Send to client error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to send estimate');
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background-primary p-6">
       <div className="max-w-5xl mx-auto">
@@ -245,6 +348,15 @@ export default function EstimateViewPage() {
             <Button onClick={handleInvoicePDF}>
               <Download className="w-4 h-4 mr-2" />
               Invoice PDF
+            </Button>
+            <div className="w-px h-8 bg-border-primary" />
+            <Button
+              onClick={handleSendToClient}
+              disabled={sendingEmail}
+              className="bg-accent-success hover:bg-accent-success/90"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              {sendingEmail ? 'Sending...' : 'Send to Client'}
             </Button>
           </div>
         </div>
