@@ -26,7 +26,7 @@ export async function generateEstimatePDFServer(
   companyInfo: UserSettings
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: 'letter', margin: 50 });
+    const doc = new PDFDocument({ size: 'letter', margins: { top: 50, bottom: 30, left: 50, right: 50 } });
     const chunks: Buffer[] = [];
 
     doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -71,10 +71,10 @@ export async function generateEstimatePDFServer(
     doc.fontSize(14).fillColor(COLOR_PRIMARY).text('ESTIMATE', leftMargin, headerY + 8);
     doc.fontSize(9).fillColor(COLOR_DARK);
     doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, leftMargin, headerY + 24);
-    doc.text('Status: PRELIMINARY', leftMargin + 120, headerY + 24);
+    doc.text('Status: PRELIMINARY', leftMargin, headerY + 37);
 
     // --- Client Information ---
-    let y = headerY + 44;
+    let y = headerY + 56;
     doc.fontSize(11).fillColor(COLOR_DARK).text('CLIENT INFORMATION', leftMargin, y);
     y += 18;
     doc.fontSize(9).fillColor(COLOR_DARK);
@@ -207,11 +207,14 @@ export async function generateEstimatePDFServer(
     // Reset font
     doc.font('Helvetica');
 
-    // --- Footer Disclaimer (pinned to bottom of page) ---
+    // --- Footer Disclaimer (pinned to bottom of first page) ---
     const pageHeight = 792; // letter height in points
     const disclaimer = 'This cost estimate is provided for budget purposes only. Final pricing is subject to finalized scope, site conditions, and official quotation. This estimate is valid for 30 days from the date above.';
     doc.fontSize(7).fillColor(COLOR_GRAY);
-    doc.text(disclaimer, leftMargin, pageHeight - 40, { width: contentWidth });
+    // Position at bottom without triggering auto-pagination
+    doc.page.margins.bottom = 0;
+    doc.text(disclaimer, leftMargin, pageHeight - 50, { width: contentWidth });
+    doc.page.margins.bottom = 30;
 
     // --- Comparable Pricing Page (if AI pricing data exists) ---
     if (estimate.aiPricing?.averagePrice != null && estimate.aiPricing?.priceRange) {
@@ -304,7 +307,9 @@ export async function generateEstimatePDFServer(
       // Footer note
       const pricingNote = `Comparable pricing data retrieved ${ai.lastUpdated ? new Date(ai.lastUpdated).toLocaleDateString() : 'N/A'}. Prices reflect market averages and may vary based on project specifics, site conditions, and material availability.`;
       doc.fontSize(7).fillColor(COLOR_GRAY);
-      doc.text(pricingNote, leftMargin, pageHeight - 40, { width: contentWidth });
+      doc.page.margins.bottom = 0;
+      doc.text(pricingNote, leftMargin, pageHeight - 50, { width: contentWidth });
+      doc.page.margins.bottom = 30;
     }
 
     doc.end();
