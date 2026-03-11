@@ -3,8 +3,8 @@ import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 // POST /api/estimates/[id]/receipts - Upload a receipt image
 export async function POST(
@@ -24,7 +24,7 @@ export async function POST(
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG and PNG are allowed.' },
+        { error: 'Invalid file type. JPEG, PNG, and PDF are allowed.' },
         { status: 400 }
       );
     }
@@ -48,7 +48,7 @@ export async function POST(
     const base64 = buffer.toString('base64');
     const dataUrl = `data:${file.type};base64,${base64}`;
 
-    const ext = file.type === 'image/png' ? '.png' : '.jpg';
+    const ext = file.type === 'image/png' ? '.png' : file.type === 'application/pdf' ? '.pdf' : '.jpg';
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 
     const receiptData = {
