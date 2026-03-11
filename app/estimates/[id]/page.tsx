@@ -223,63 +223,42 @@ export default function EstimateViewPage() {
       const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
       const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls, logoDataUrl);
 
-      // Convert blob to base64
-      const buffer = await blob.arrayBuffer();
-      const base64 = btoa(
-        new Uint8Array(buffer).reduce((d, byte) => d + String.fromCharCode(byte), '')
-      );
-
       const location = `${estimate.projectAddress}, ${estimate.city}${estimate.state ? `, ${estimate.state}` : ''}`;
       const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
 
-      // Create draft
-      const createRes = await fetch('/api/outbound-email', {
+      const subject = `Estimate for ${estimate.scopeOfWork.slice(0, 60)} — ${location}`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px;">
+          <h2 style="color: #333;">Estimate from Charlie's Electric</h2>
+          <p>Hi ${estimate.clientName},</p>
+          <p>Thank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at <strong>${location}</strong>.</p>
+          <h3 style="color: #555;">Scope of Work</h3>
+          <p>${estimate.scopeOfWork.replace(/\n/g, '<br/>')}</p>
+          <h3 style="color: #555;">Estimate Total: $${estimate.pricing.total.toFixed(2)}</h3>
+          <p>This estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.</p>
+          <p>Best regards,<br/>Mario Bermudez Jr.<br/>Charlie's Electric<br/>562.500.3126</p>
+        </div>
+      `;
+      const text = `Hi ${estimate.clientName},\n\nThank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at ${location}.\n\nScope of Work:\n${estimate.scopeOfWork}\n\nEstimate Total: $${estimate.pricing.total.toFixed(2)}\n\nThis estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.\n\nBest regards,\nMario Bermudez Jr.\nCharlie's Electric\n562.500.3126`;
+
+      // Send via FormData to avoid JSON body size limits
+      const formData = new FormData();
+      formData.append('pdf', blob, filename);
+      formData.append('to', estimate.clientEmail);
+      formData.append('clientName', estimate.clientName);
+      formData.append('subject', subject);
+      formData.append('html', html);
+      formData.append('text', text);
+      formData.append('filename', filename);
+
+      const sendRes = await fetch(`/api/estimates/${estimate.id}/send-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: 'estimates@charlieselectric.online',
-          to: [estimate.clientEmail],
-          bcc: ['mbermudez91@gmail.com'],
-          subject: `Estimate for ${estimate.scopeOfWork.slice(0, 60)} — ${location}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px;">
-              <h2 style="color: #333;">Estimate from Charlie's Electric</h2>
-              <p>Hi ${estimate.clientName},</p>
-              <p>Thank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at <strong>${location}</strong>.</p>
-              <h3 style="color: #555;">Scope of Work</h3>
-              <p>${estimate.scopeOfWork.replace(/\n/g, '<br/>')}</p>
-              <h3 style="color: #555;">Estimate Total: $${estimate.pricing.total.toFixed(2)}</h3>
-              <p>This estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.</p>
-              <p>Best regards,<br/>Mario Bermudez Jr.<br/>Charlie's Electric<br/>562.500.3126</p>
-            </div>
-          `,
-          text: `Hi ${estimate.clientName},\n\nThank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at ${location}.\n\nScope of Work:\n${estimate.scopeOfWork}\n\nEstimate Total: $${estimate.pricing.total.toFixed(2)}\n\nThis estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.\n\nBest regards,\nMario Bermudez Jr.\nCharlie's Electric\n562.500.3126`,
-          attachments: [{
-            filename,
-            originalName: filename,
-            mimeType: 'application/pdf',
-            size: blob.size,
-            data: base64,
-          }],
-          estimateId: estimate.id,
-        }),
-      });
-
-      if (!createRes.ok) {
-        const err = await createRes.json();
-        throw new Error(err.error || 'Failed to create email');
-      }
-
-      const { data: draft } = await createRes.json();
-
-      // Send it
-      const sendRes = await fetch(`/api/outbound-email/${draft.id}/send`, {
-        method: 'POST',
+        body: formData,
       });
 
       if (!sendRes.ok) {
-        const err = await sendRes.json();
-        throw new Error(err.error || 'Failed to send email');
+        const errData = await sendRes.json().catch(() => null);
+        throw new Error(errData?.error || 'Failed to send email');
       }
 
       // Update estimate status to sent
