@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import Image from 'next/image';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown, DollarSign, Plus, ImageIcon, Save } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown, DollarSign, Plus, ImageIcon, Save, Eye } from 'lucide-react';
 import { ReceiptImage, Payment } from '@/types/estimate';
 
 export default function EstimateViewPage() {
@@ -222,6 +222,64 @@ export default function EstimateViewPage() {
       }
     } catch (err) {
       console.error('Delete receipt error:', err);
+    }
+  };
+
+  const handleViewReceipt = async (filename: string, originalName: string, mimeType: string) => {
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/receipts/${filename}`);
+      if (!res.ok) throw new Error('Failed to fetch receipt');
+      const json = await res.json();
+      const dataUrl: string = json.data;
+
+      // Extract base64 data and convert to blob
+      const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+      if (!match) throw new Error('Invalid data format');
+
+      const byteChars = atob(match[2]);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteArray[i] = byteChars.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: match[1] });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // Open in new tab for viewing
+      window.open(blobUrl, '_blank');
+    } catch (err) {
+      console.error('View receipt error:', err);
+      alert('Failed to open receipt.');
+    }
+  };
+
+  const handleDownloadReceipt = async (filename: string, originalName: string) => {
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/receipts/${filename}`);
+      if (!res.ok) throw new Error('Failed to fetch receipt');
+      const json = await res.json();
+      const dataUrl: string = json.data;
+
+      const match = dataUrl.match(/^data:(.+);base64,(.+)$/);
+      if (!match) throw new Error('Invalid data format');
+
+      const byteChars = atob(match[2]);
+      const byteArray = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) {
+        byteArray[i] = byteChars.charCodeAt(i);
+      }
+      const blob = new Blob([byteArray], { type: match[1] });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = originalName || filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error('Download receipt error:', err);
+      alert('Failed to download receipt.');
     }
   };
 
@@ -939,14 +997,35 @@ export default function EstimateViewPage() {
                           {new Date(receipt.uploadedAt).toLocaleDateString()}
                         </p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-text-tertiary hover:text-accent-danger ml-2 shrink-0"
-                        onClick={() => handleDeleteReceipt(receipt.filename)}
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-text-tertiary hover:text-accent-primary"
+                          title="View"
+                          onClick={() => handleViewReceipt(receipt.filename, receipt.originalName, receipt.mimeType)}
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-text-tertiary hover:text-accent-primary"
+                          title="Download"
+                          onClick={() => handleDownloadReceipt(receipt.filename, receipt.originalName)}
+                        >
+                          <Download className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-text-tertiary hover:text-accent-danger"
+                          title="Delete"
+                          onClick={() => handleDeleteReceipt(receipt.filename)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
