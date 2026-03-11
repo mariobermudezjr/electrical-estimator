@@ -312,6 +312,44 @@ export async function generateEstimatePDFServer(
       doc.page.margins.bottom = 30;
     }
 
+    // --- Note Images (job site photos, reference images) ---
+    if (estimate.noteImages && estimate.noteImages.length > 0) {
+      for (let i = 0; i < estimate.noteImages.length; i++) {
+        const img = estimate.noteImages[i];
+        if (!img.data) continue;
+
+        doc.addPage();
+
+        doc.fontSize(12).fillColor(COLOR_DARK).text(
+          `JOB SITE PHOTO ${i + 1} of ${estimate.noteImages.length}`,
+          leftMargin, 50
+        );
+        doc.fontSize(8).fillColor(COLOR_GRAY).text(
+          img.originalName || img.filename,
+          leftMargin, 65
+        );
+
+        try {
+          // Convert data URL to buffer for PDFKit
+          const base64Match = img.data.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+          if (base64Match) {
+            const imgBuffer = Buffer.from(base64Match[2], 'base64');
+            doc.image(imgBuffer, leftMargin, 80, {
+              fit: [contentWidth, pageHeight - 130],
+              align: 'center',
+              valign: 'center',
+            });
+          }
+        } catch (imgErr) {
+          console.error(`[pdf-server] Failed to add note image ${img.filename}:`, imgErr);
+          doc.fontSize(9).fillColor(COLOR_GRAY).text(
+            'Image could not be embedded.',
+            leftMargin, 80
+          );
+        }
+      }
+    }
+
     doc.end();
   });
 }
