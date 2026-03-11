@@ -836,7 +836,7 @@ export default function EstimateViewPage() {
                   <input
                     ref={noteImageInputRef}
                     type="file"
-                    accept="image/jpeg,image/png"
+                    accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
                     className="hidden"
                     onChange={handleUploadNoteImage}
                   />

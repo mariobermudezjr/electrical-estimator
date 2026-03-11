@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
 import Estimate from '@/lib/db/models/Estimate';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const convert = require('heic-convert');
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png'];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
+const MAX_SIZE = 15 * 1024 * 1024; // 15MB (HEIC files can be larger)
 
 // POST /api/estimates/[id]/note-images — Upload a note image
 export async function POST(
@@ -22,16 +24,20 @@ export async function POST(
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    if (!ALLOWED_TYPES.includes(file.type)) {
+    // Check file type — also handle HEIC files that browsers may report as ''
+    const isHeic = ALLOWED_TYPES.slice(2).includes(file.type) ||
+      /\.heic$/i.test(file.name) || /\.heif$/i.test(file.name);
+
+    if (!ALLOWED_TYPES.includes(file.type) && !isHeic) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only JPEG and PNG are allowed.' },
+        { error: 'Invalid file type. JPEG, PNG, and HEIC are allowed.' },
         { status: 400 }
       );
     }
 
     if (file.size > MAX_SIZE) {
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 5MB.' },
+        { error: 'File too large. Maximum size is 15MB.' },
         { status: 400 }
       );
     }
@@ -43,18 +49,39 @@ export async function POST(
       return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const base64 = buffer.toString('base64');
-    const dataUrl = `data:${file.type};base64,${base64}`;
+    let buffer = Buffer.from(await file.arrayBuffer());
+    let mimeType = file.type;
 
-    const ext = file.type === 'image/png' ? '.png' : '.jpg';
+    // Convert HEIC/HEIF to JPEG
+    if (isHeic) {
+      try {
+        const converted = await convert({
+          buffer,
+          format: 'JPEG',
+          quality: 0.85,
+        });
+        buffer = Buffer.from(converted);
+        mimeType = 'image/jpeg';
+      } catch (convErr) {
+        console.error('HEIC conversion error:', convErr);
+        return NextResponse.json(
+          { error: 'Failed to convert HEIC image. Please convert to JPEG/PNG first.' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const base64 = buffer.toString('base64');
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+
+    const ext = mimeType === 'image/png' ? '.png' : '.jpg';
     const filename = `note-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
 
     const imageData = {
       filename,
       originalName: file.name,
-      mimeType: file.type,
-      size: file.size,
+      mimeType,
+      size: buffer.length,
       data: dataUrl,
       uploadedAt: new Date(),
     };

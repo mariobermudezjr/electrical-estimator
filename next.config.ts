@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '6mb',
     },
   },
-  serverExternalPackages: ['pdfkit'],
+  serverExternalPackages: ['pdfkit', 'heic-convert'],
 };
 
 export default nextConfig;
