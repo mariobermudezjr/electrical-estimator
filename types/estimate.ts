@@ -62,6 +62,14 @@ export interface ReceiptImage {
   uploadedAt: Date;
 }
 
+export interface Payment {
+  id: string;
+  amount: number;
+  method?: 'cash' | 'check' | 'card' | 'zelle' | 'venmo' | 'other';
+  note?: string;
+  date: Date;
+}
+
 export interface Estimate {
   id: string;
   clientId?: string;
@@ -80,6 +88,7 @@ export interface Estimate {
   updatedAt: Date;
   notes?: string;
   receipts?: ReceiptImage[];
+  payments?: Payment[];
 }
 
 // Serializable version for local storage

@@ -12,13 +12,13 @@ import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import Image from 'next/image';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown } from 'lucide-react';
-import { ReceiptImage } from '@/types/estimate';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown, DollarSign, Plus } from 'lucide-react';
+import { ReceiptImage, Payment } from '@/types/estimate';
 
 export default function EstimateViewPage() {
   const params = useParams();
   const router = useRouter();
-  const { getEstimate, deleteEstimate, updateEstimate } = useEstimateStore();
+  const { getEstimate, deleteEstimate, updateEstimate, fetchEstimates } = useEstimateStore();
   const { settings, fetchSettings } = useSettingsStore();
 
   const [receipts, setReceipts] = useState<ReceiptImage[]>([]);
@@ -29,6 +29,11 @@ export default function EstimateViewPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const exportRef = useRef<HTMLDivElement>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [paymentNote, setPaymentNote] = useState('');
+  const [addingPayment, setAddingPayment] = useState(false);
 
   const estimate = getEstimate(params.id as string);
 
@@ -239,6 +244,57 @@ export default function EstimateViewPage() {
       setSendingEmail(false);
     }
   };
+
+  const handleAddPayment = async () => {
+    const amount = parseFloat(paymentAmount);
+    if (!amount || amount <= 0) {
+      alert('Please enter a valid amount.');
+      return;
+    }
+    setAddingPayment(true);
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/payments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount,
+          method: paymentMethod || undefined,
+          note: paymentNote || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Failed to add payment');
+      }
+      // Refresh estimate data
+      await fetchEstimates();
+      setPaymentAmount('');
+      setPaymentMethod('');
+      setPaymentNote('');
+      setShowPaymentForm(false);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to add payment');
+    } finally {
+      setAddingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('Remove this payment?')) return;
+    try {
+      const res = await fetch(`/api/estimates/${estimate.id}/payments?paymentId=${paymentId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to remove payment');
+      await fetchEstimates();
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to remove payment');
+    }
+  };
+
+  const payments = estimate.payments || [];
+  const totalPaid = payments.reduce((sum: number, p: Payment) => sum + p.amount, 0);
+  const balance = estimate.pricing.total - totalPaid;
 
   return (
     <div className="min-h-screen bg-background-primary p-6">
@@ -542,6 +598,138 @@ export default function EstimateViewPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Payments */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Payments</CardTitle>
+                  <CardDescription>
+                    {totalPaid > 0
+                      ? `${formatCurrency(totalPaid)} paid of ${formatCurrency(estimate.pricing.total)} — Balance: ${formatCurrency(balance)}`
+                      : 'No payments recorded'}
+                  </CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowPaymentForm(!showPaymentForm)}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  Add Payment
+                </Button>
+              </div>
+              {/* Progress bar */}
+              {totalPaid > 0 && (
+                <div className="mt-3 h-2 bg-background-elevated rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${balance <= 0 ? 'bg-accent-success' : 'bg-accent-primary'}`}
+                    style={{ width: `${Math.min((totalPaid / estimate.pricing.total) * 100, 100)}%` }}
+                  />
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {/* Add Payment Form */}
+              {showPaymentForm && (
+                <div className="bg-background-elevated rounded-lg p-4 mb-4 space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Amount *</label>
+                      <div className="relative">
+                        <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary" />
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={paymentAmount}
+                          onChange={(e) => setPaymentAmount(e.target.value)}
+                          className="w-full pl-7 pr-3 py-1.5 text-sm bg-background-primary border border-border-primary rounded-md text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Method</label>
+                      <select
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm bg-background-primary border border-border-primary rounded-md text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                      >
+                        <option value="">Select...</option>
+                        <option value="cash">Cash</option>
+                        <option value="check">Check</option>
+                        <option value="card">Card</option>
+                        <option value="zelle">Zelle</option>
+                        <option value="venmo">Venmo</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-text-secondary mb-1 block">Note</label>
+                      <input
+                        type="text"
+                        placeholder="Optional note"
+                        value={paymentNote}
+                        onChange={(e) => setPaymentNote(e.target.value)}
+                        className="w-full px-3 py-1.5 text-sm bg-background-primary border border-border-primary rounded-md text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-primary"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setShowPaymentForm(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" variant="success" onClick={handleAddPayment} disabled={addingPayment}>
+                      <DollarSign className="w-3.5 h-3.5 mr-1" />
+                      {addingPayment ? 'Adding...' : 'Record Payment'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Payment History */}
+              {payments.length > 0 ? (
+                <div className="space-y-2">
+                  {payments.map((p: Payment) => (
+                    <div key={p.id} className="flex items-center justify-between bg-background-elevated p-3 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-accent-success/10 flex items-center justify-center">
+                          <DollarSign className="w-4 h-4 text-accent-success" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-text-primary">
+                            {formatCurrency(p.amount)}
+                            {p.method && (
+                              <span className="ml-2 text-xs text-text-tertiary capitalize">
+                                via {p.method}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-text-tertiary">
+                            {new Date(p.date).toLocaleDateString()}
+                            {p.note && ` — ${p.note}`}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeletePayment(p.id)}
+                        className="p-1 rounded hover:bg-background-primary text-text-tertiary hover:text-accent-danger transition-colors"
+                        title="Remove payment"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : !showPaymentForm ? (
+                <p className="text-sm text-text-tertiary text-center py-4">
+                  No payments recorded yet.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 

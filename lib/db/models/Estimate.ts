@@ -25,6 +25,14 @@ const ReceiptImageSchema = new Schema({
   uploadedAt: { type: Date, default: Date.now },
 }, { _id: false });
 
+const PaymentSchema = new Schema({
+  id: { type: String, required: true },
+  amount: { type: Number, required: true, min: 0 },
+  method: { type: String, enum: ['cash', 'check', 'card', 'zelle', 'venmo', 'other'] },
+  note: { type: String, trim: true },
+  date: { type: Date, required: true, default: Date.now },
+}, { _id: false });
+
 const EstimateSchema = new Schema<IEstimate>(
   {
     userId: {
@@ -119,7 +127,8 @@ const EstimateSchema = new Schema<IEstimate>(
       required: true
     },
     notes: { type: String },
-    receipts: [ReceiptImageSchema]
+    receipts: [ReceiptImageSchema],
+    payments: [PaymentSchema]
   },
   {
     timestamps: true,
