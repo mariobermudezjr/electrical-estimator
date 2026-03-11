@@ -12,7 +12,7 @@ import { formatCurrency } from '@/lib/pricing/formatters';
 import { generateEstimatePDF, generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { generateEstimateExcel, generateInvoiceExcel, downloadExcel } from '@/lib/export/excel-service';
 import Image from 'next/image';
-import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Trash2, Edit, Upload, X, Send, CheckCircle, XCircle, Mail, ChevronDown } from 'lucide-react';
 import { ReceiptImage } from '@/types/estimate';
 
 export default function EstimateViewPage() {
@@ -27,6 +27,8 @@ export default function EstimateViewPage() {
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const estimate = getEstimate(params.id as string);
 
@@ -47,6 +49,17 @@ export default function EstimateViewPage() {
     fetchReceipts();
     fetchSettings().catch(() => {});
   }, [fetchReceipts, fetchSettings]);
+
+  // Close export dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setExportOpen(false);
+      }
+    };
+    if (exportOpen) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [exportOpen]);
 
   if (!estimate) {
     return (
@@ -254,41 +267,63 @@ export default function EstimateViewPage() {
               </p>
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={handleDelete} className="text-accent-danger">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleDelete} className="text-accent-danger hover:text-red-400">
+              <Trash2 className="w-4 h-4" />
             </Button>
             <Link href={`/estimates/${estimate.id}/edit`}>
-              <Button variant="outline">
-                <Edit className="w-4 h-4 mr-2" />
+              <Button variant="outline" size="sm">
+                <Edit className="w-3.5 h-3.5 mr-1.5" />
                 Edit
               </Button>
             </Link>
-            <Button variant="outline" onClick={handleExportExcel}>
-              <FileText className="w-4 h-4 mr-2" />
-              Export Excel
-            </Button>
-            <Button onClick={handleExportPDF}>
-              <Download className="w-4 h-4 mr-2" />
-              Estimate PDF
-            </Button>
-            <div className="w-px h-8 bg-border-primary" />
-            <Button variant="outline" onClick={handleInvoiceExcel}>
-              <FileText className="w-4 h-4 mr-2" />
-              Invoice Excel
-            </Button>
-            <Button onClick={handleInvoicePDF}>
-              <Download className="w-4 h-4 mr-2" />
-              Invoice PDF
-            </Button>
-            <div className="w-px h-8 bg-border-primary" />
+            <div ref={exportRef} className="relative">
+              <Button variant="outline" size="sm" onClick={() => setExportOpen(!exportOpen)}>
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Export
+                <ChevronDown className={`w-3.5 h-3.5 ml-1 transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
+              </Button>
+              {exportOpen && (
+                <div className="absolute right-0 top-full mt-1 w-48 bg-background-elevated border border-border-primary rounded-lg shadow-lg z-50 py-1">
+                  <button
+                    onClick={() => { handleExportPDF(); setExportOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-background-primary transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-text-secondary" />
+                    Estimate PDF
+                  </button>
+                  <button
+                    onClick={() => { handleExportExcel(); setExportOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-background-primary transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-text-secondary" />
+                    Estimate Excel
+                  </button>
+                  <div className="h-px bg-border-primary mx-2 my-1" />
+                  <button
+                    onClick={() => { handleInvoicePDF(); setExportOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-background-primary transition-colors"
+                  >
+                    <Download className="w-3.5 h-3.5 text-text-secondary" />
+                    Invoice PDF
+                  </button>
+                  <button
+                    onClick={() => { handleInvoiceExcel(); setExportOpen(false); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-background-primary transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-text-secondary" />
+                    Invoice Excel
+                  </button>
+                </div>
+              )}
+            </div>
             <Button
+              size="sm"
               onClick={handleSendToClient}
               disabled={sendingEmail}
               className="bg-accent-success hover:bg-accent-success/90"
             >
-              <Mail className="w-4 h-4 mr-2" />
+              <Mail className="w-3.5 h-3.5 mr-1.5" />
               {sendingEmail ? 'Sending...' : 'Send to Client'}
             </Button>
           </div>
