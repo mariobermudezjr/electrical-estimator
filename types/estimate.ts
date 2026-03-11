@@ -75,7 +75,7 @@ export interface Estimate {
   scopeOfWork: string;
   pricing: PricingBreakdown;
   aiPricing?: AIPricingData;
-  status: 'draft' | 'sent' | 'approved' | 'rejected';
+  status: 'draft' | 'sent' | 'approved' | 'rejected' | 'completed_paid' | 'completed_unpaid';
   createdAt: Date;
   updatedAt: Date;
   notes?: string;

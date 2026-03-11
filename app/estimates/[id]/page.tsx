@@ -93,7 +93,7 @@ export default function EstimateViewPage() {
     }
   };
 
-  const handleStatusChange = async (newStatus: 'sent' | 'approved' | 'rejected') => {
+  const handleStatusChange = async (newStatus: 'sent' | 'approved' | 'rejected' | 'completed_paid' | 'completed_unpaid') => {
     setUpdatingStatus(true);
     try {
       await updateEstimate(estimate.id, { status: newStatus });
@@ -339,12 +339,16 @@ export default function EstimateViewPage() {
                   <Badge
                     variant={
                       estimate.status === 'approved' ? 'success' :
+                      estimate.status === 'completed_paid' ? 'success' :
+                      estimate.status === 'completed_unpaid' ? 'warning' :
                       estimate.status === 'sent' ? 'default' :
                       estimate.status === 'rejected' ? 'danger' :
                       'warning'
                     }
                   >
-                    {estimate.status}
+                    {estimate.status === 'completed_paid' ? 'Done — Paid' :
+                     estimate.status === 'completed_unpaid' ? 'Done — Unpaid' :
+                     estimate.status}
                   </Badge>
                   {estimate.status === 'draft' && (
                     <Button
@@ -377,6 +381,39 @@ export default function EstimateViewPage() {
                         Reject
                       </Button>
                     </>
+                  )}
+                  {estimate.status === 'approved' && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="success"
+                        onClick={() => handleStatusChange('completed_paid')}
+                        disabled={updatingStatus}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Done — Paid
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleStatusChange('completed_unpaid')}
+                        disabled={updatingStatus}
+                      >
+                        <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                        Done — Unpaid
+                      </Button>
+                    </>
+                  )}
+                  {estimate.status === 'completed_unpaid' && (
+                    <Button
+                      size="sm"
+                      variant="success"
+                      onClick={() => handleStatusChange('completed_paid')}
+                      disabled={updatingStatus}
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                      Mark Paid
+                    </Button>
                   )}
                   {estimate.status === 'rejected' && (
                     <Button

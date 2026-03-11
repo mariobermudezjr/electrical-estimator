@@ -114,7 +114,7 @@ const EstimateSchema = new Schema<IEstimate>(
     },
     status: {
       type: String,
-      enum: ['draft', 'sent', 'approved', 'rejected'],
+      enum: ['draft', 'sent', 'approved', 'rejected', 'completed_paid', 'completed_unpaid'],
       default: 'draft',
       required: true
     },

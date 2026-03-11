@@ -49,8 +49,19 @@ export default function DashboardPage() {
   }
 
   const totalValue = estimates.reduce((sum, est) => sum + est.pricing.total, 0);
-  const draftCount = estimates.filter(est => est.status === 'draft').length;
-  const sentCount = estimates.filter(est => est.status === 'sent').length;
+
+  const statusBreakdown = [
+    { key: 'completed_paid', label: 'Done — Paid', variant: 'success' as const },
+    { key: 'completed_unpaid', label: 'Done — Unpaid', variant: 'warning' as const },
+    { key: 'approved', label: 'Approved', variant: 'success' as const },
+    { key: 'sent', label: 'Sent', variant: 'default' as const },
+    { key: 'draft', label: 'Draft', variant: 'warning' as const },
+    { key: 'rejected', label: 'Rejected', variant: 'danger' as const },
+  ].map(s => ({
+    ...s,
+    count: estimates.filter(e => e.status === s.key).length,
+    total: estimates.filter(e => e.status === s.key).reduce((sum, e) => sum + e.pricing.total, 0),
+  })).filter(s => s.count > 0);
 
   return (
     <div className="min-h-screen bg-background-primary p-6">
@@ -101,25 +112,32 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Total Estimates</CardDescription>
-              <CardTitle className="text-3xl">{estimates.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardDescription>Total Estimates</CardDescription>
+                <CardTitle className="text-3xl">{estimates.length}</CardTitle>
+              </div>
               <CardDescription>Total Value</CardDescription>
               <CardTitle className="text-3xl">{formatCurrency(totalValue)}</CardTitle>
             </CardHeader>
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Status Breakdown</CardDescription>
-              <div className="flex gap-2 mt-2">
-                <Badge variant="warning">{draftCount} Draft</Badge>
-                <Badge variant="success">{sentCount} Sent</Badge>
+              <CardDescription>Value by Status</CardDescription>
+              <div className="space-y-2 mt-2">
+                {statusBreakdown.map(s => (
+                  <div key={s.key} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={s.variant}>{s.label}</Badge>
+                      <span className="text-xs text-text-tertiary">{s.count}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-text-primary">
+                      {formatCurrency(s.total)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </CardHeader>
           </Card>
@@ -160,12 +178,16 @@ export default function DashboardPage() {
                             <Badge
                               variant={
                                 estimate.status === 'approved' ? 'success' :
+                                estimate.status === 'completed_paid' ? 'success' :
+                                estimate.status === 'completed_unpaid' ? 'warning' :
                                 estimate.status === 'sent' ? 'default' :
                                 estimate.status === 'rejected' ? 'danger' :
                                 'warning'
                               }
                             >
-                              {estimate.status}
+                              {estimate.status === 'completed_paid' ? 'Done — Paid' :
+                               estimate.status === 'completed_unpaid' ? 'Done — Unpaid' :
+                               estimate.status}
                             </Badge>
                           </div>
                           <CardDescription className="line-clamp-2">
