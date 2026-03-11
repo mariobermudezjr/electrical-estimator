@@ -86,7 +86,7 @@ export async function PATCH(
         await sendEmail({
           from: FROM_EMAIL,
           to: [job.clientEmail],
-          cc: [OWNER_EMAIL],
+          bcc: [OWNER_EMAIL],
           subject: `Schedule Updated: ${job.title} — ${dateStr}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px;">

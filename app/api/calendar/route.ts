@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         await sendEmail({
           from: FROM_EMAIL,
           to: [body.clientEmail],
-          cc: [OWNER_EMAIL],
+          bcc: [OWNER_EMAIL],
           subject: `Work Scheduled: ${body.title} — ${dateStr}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px;">

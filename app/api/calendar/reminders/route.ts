@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
           await sendEmail({
             from: FROM_EMAIL,
             to: [job.clientEmail],
-            cc: [OWNER_EMAIL],
+            bcc: [OWNER_EMAIL],
             subject: `Today: ${job.title} — ${dateStr}`,
             html: buildReminderHtml(job.clientName, job.title, dateStr, job.startTime, job.endTime, job.location, 'today'),
             text: buildReminderText(job.clientName, job.title, dateStr, job.startTime, job.endTime, job.location, 'today'),
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
           await sendEmail({
             from: FROM_EMAIL,
             to: [job.clientEmail],
-            cc: [OWNER_EMAIL],
+            bcc: [OWNER_EMAIL],
             subject: `Tomorrow: ${job.title} — ${dateStr}`,
             html: buildReminderHtml(job.clientName, job.title, dateStr, job.startTime, job.endTime, job.location, 'tomorrow'),
             text: buildReminderText(job.clientName, job.title, dateStr, job.startTime, job.endTime, job.location, 'tomorrow'),
