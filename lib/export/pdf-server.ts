@@ -38,16 +38,6 @@ export async function generateEstimatePDFServer(
     const rightMargin = 56;
     const contentWidth = pageWidth - leftMargin - rightMargin;
 
-    // --- Logo ---
-    try {
-      const logoPath = path.join(process.cwd(), 'public', 'charlies-electric-logo-white.png');
-      if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, pageWidth - rightMargin - 100, 40, { width: 90 });
-      }
-    } catch {
-      // Logo not found, skip
-    }
-
     // --- Header: Company Info ---
     doc.fontSize(20).fillColor(COLOR_DARK).text(companyInfo.companyName, leftMargin, 50);
 
@@ -71,6 +61,18 @@ export async function generateEstimatePDFServer(
     doc.fontSize(9).fillColor(COLOR_DARK);
     doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, 420, 68);
     doc.text('Status: PRELIMINARY', 420, 81);
+
+    // --- Logo (centered between header and client info) ---
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'charlies-electric-logo-white.png');
+      if (fs.existsSync(logoPath)) {
+        const logoSize = 44;
+        const logoX = (pageWidth - logoSize) / 2;
+        doc.image(logoPath, logoX, 92, { width: logoSize, height: logoSize });
+      }
+    } catch {
+      // Logo not found, skip
+    }
 
     // --- Client Information ---
     let y = 140;
