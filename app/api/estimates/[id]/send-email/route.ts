@@ -35,50 +35,65 @@ export async function POST(
 
     // Convert file to buffer
     const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
+    console.log('[send-email] PDF size:', pdfBuffer.length, 'bytes, to:', to, 'subject:', subject?.slice(0, 50));
 
     await connectDB();
 
     // Send via Resend
-    const result = await sendEmail({
-      from: FROM_EMAIL,
-      to: [to],
-      bcc: [OWNER_EMAIL],
-      subject,
-      html,
-      text,
-      attachments: [{
-        filename: filename || 'estimate.pdf',
-        content: pdfBuffer,
-      }],
-    });
+    let result;
+    try {
+      result = await sendEmail({
+        from: FROM_EMAIL,
+        to: [to],
+        bcc: [OWNER_EMAIL],
+        subject,
+        html,
+        text,
+        attachments: [{
+          filename: filename || 'estimate.pdf',
+          content: pdfBuffer,
+        }],
+      });
+      console.log('[send-email] Resend success, id:', result?.id);
+    } catch (sendErr) {
+      console.error('[send-email] Resend API error:', sendErr);
+      return NextResponse.json(
+        { error: `Resend send failed: ${sendErr instanceof Error ? sendErr.message : String(sendErr)}` },
+        { status: 502 }
+      );
+    }
 
-    // Save a record in OutboundEmail (without the large attachment data)
-    await OutboundEmail.create({
-      userId,
-      folder: 'sent',
-      from: FROM_EMAIL,
-      to: [to],
-      bcc: [OWNER_EMAIL],
-      subject,
-      html,
-      text,
-      attachments: [{
-        filename: filename || 'estimate.pdf',
-        originalName: filename || 'estimate.pdf',
-        mimeType: 'application/pdf',
-        size: pdfBuffer.length,
-        // Intentionally omit data to avoid storing large blobs
-      }],
-      estimateId,
-      resendId: result?.id,
-      sentAt: new Date(),
-    });
+    // Save a record in OutboundEmail
+    try {
+      await OutboundEmail.create({
+        userId,
+        folder: 'sent',
+        from: FROM_EMAIL,
+        to: [to],
+        bcc: [OWNER_EMAIL],
+        subject,
+        html,
+        text,
+        attachments: [{
+          filename: filename || 'estimate.pdf',
+          originalName: filename || 'estimate.pdf',
+          mimeType: 'application/pdf',
+          size: pdfBuffer.length,
+        }],
+        estimateId,
+        resendId: result?.id,
+        sentAt: new Date(),
+      });
+    } catch (dbErr) {
+      console.error('[send-email] DB save error (email was sent):', dbErr);
+      // Email was sent successfully, just failed to save record — don't fail the request
+    }
 
     return NextResponse.json({ success: true, resendId: result?.id });
   } catch (error) {
-    console.error('POST /api/estimates/[id]/send-email error:', error);
+    console.error('[send-email] Unexpected error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send email' },
+      { error: `Unexpected error: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     );
   }

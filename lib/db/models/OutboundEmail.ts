@@ -36,7 +36,7 @@ const AttachmentSchema = new Schema({
   originalName: { type: String, required: true },
   mimeType: { type: String, required: true },
   size: { type: Number, required: true },
-  data: { type: String, required: true },
+  data: { type: String },
 }, { _id: false });
 
 const OutboundEmailSchema = new Schema<IOutboundEmail>(
