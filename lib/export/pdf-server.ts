@@ -38,6 +38,17 @@ export async function generateEstimatePDFServer(
     const rightMargin = 56;
     const contentWidth = pageWidth - leftMargin - rightMargin;
 
+    // --- Logo (right side of company name header) ---
+    const logoSize = 88;
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'charlies-electric-logo-white.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, pageWidth - rightMargin - logoSize, 40, { width: logoSize, height: logoSize });
+      }
+    } catch {
+      // Logo not found, skip
+    }
+
     // --- Header: Company Info ---
     doc.fontSize(20).fillColor(COLOR_DARK).text(companyInfo.companyName, leftMargin, 50);
 
@@ -57,25 +68,13 @@ export async function generateEstimatePDFServer(
     }
 
     // --- Estimate title block ---
-    doc.fontSize(14).fillColor(COLOR_PRIMARY).text('ESTIMATE', 420, 50);
+    doc.fontSize(14).fillColor(COLOR_PRIMARY).text('ESTIMATE', leftMargin, headerY + 8);
     doc.fontSize(9).fillColor(COLOR_DARK);
-    doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, 420, 68);
-    doc.text('Status: PRELIMINARY', 420, 81);
-
-    // --- Logo (centered between header and client info) ---
-    try {
-      const logoPath = path.join(process.cwd(), 'public', 'charlies-electric-logo-white.png');
-      if (fs.existsSync(logoPath)) {
-        const logoSize = 44;
-        const logoX = (pageWidth - logoSize) / 2;
-        doc.image(logoPath, logoX, 92, { width: logoSize, height: logoSize });
-      }
-    } catch {
-      // Logo not found, skip
-    }
+    doc.text(`Date: ${new Date(estimate.createdAt).toLocaleDateString()}`, leftMargin, headerY + 24);
+    doc.text('Status: PRELIMINARY', leftMargin + 120, headerY + 24);
 
     // --- Client Information ---
-    let y = 140;
+    let y = headerY + 44;
     doc.fontSize(11).fillColor(COLOR_DARK).text('CLIENT INFORMATION', leftMargin, y);
     y += 18;
     doc.fontSize(9).fillColor(COLOR_DARK);
@@ -213,6 +212,100 @@ export async function generateEstimatePDFServer(
     const disclaimer = 'This cost estimate is provided for budget purposes only. Final pricing is subject to finalized scope, site conditions, and official quotation. This estimate is valid for 30 days from the date above.';
     doc.fontSize(7).fillColor(COLOR_GRAY);
     doc.text(disclaimer, leftMargin, pageHeight - 40, { width: contentWidth });
+
+    // --- Comparable Pricing Page (if AI pricing data exists) ---
+    if (estimate.aiPricing?.averagePrice != null && estimate.aiPricing?.priceRange) {
+      const ai = estimate.aiPricing;
+      doc.addPage();
+
+      // Title
+      doc.fontSize(14).fillColor(COLOR_PRIMARY).text('COMPARABLE PRICING IN YOUR AREA', leftMargin, 50);
+
+      // Location context
+      const loc = `${estimate.city}${estimate.state ? `, ${estimate.state}` : ''} — ${estimate.workType.replace(/_/g, ' ')}`;
+      doc.fontSize(9).fillColor(COLOR_GRAY).text(loc, leftMargin, 70);
+
+      // Market Summary heading
+      let py = 90;
+      doc.fontSize(11).fillColor(COLOR_DARK).text('MARKET SUMMARY', leftMargin, py);
+      py += 16;
+
+      // Summary box
+      doc.rect(leftMargin, py, contentWidth, 50).fill('#E6F0FF');
+
+      // Left side labels
+      doc.fontSize(9).fillColor(COLOR_GRAY);
+      doc.text('Average Market Price', leftMargin + 10, py + 10);
+      doc.text('Price Range', leftMargin + 10, py + 30);
+
+      // Left side values
+      doc.fontSize(11).fillColor(COLOR_DARK);
+      doc.text(
+        `$${ai.averagePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        leftMargin + 140, py + 10
+      );
+      doc.fontSize(9);
+      doc.text(
+        `$${ai.priceRange.min.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} — $${ai.priceRange.max.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        leftMargin + 140, py + 30
+      );
+
+      // Right side
+      const confidenceLabel = `Confidence: ${ai.confidence.charAt(0).toUpperCase() + ai.confidence.slice(1)}`;
+      doc.fontSize(8).fillColor(COLOR_GRAY);
+      doc.text(confidenceLabel, pageWidth - rightMargin - 150, py + 10, { width: 140, align: 'right' });
+
+      doc.fontSize(9).fillColor(COLOR_PRIMARY);
+      doc.text(
+        `Your Estimate: $${estimate.pricing.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        pageWidth - rightMargin - 150, py + 30, { width: 140, align: 'right' }
+      );
+
+      py += 64;
+
+      // Sources table
+      if (ai.sources && ai.sources.length > 0) {
+        doc.fontSize(11).fillColor(COLOR_DARK).text('PRICING SOURCES', leftMargin, py);
+        py += 16;
+
+        // Table header
+        const srcColWidths = [contentWidth * 0.25, contentWidth * 0.2, contentWidth * 0.55];
+        const srcColX = [leftMargin, leftMargin + srcColWidths[0], leftMargin + srcColWidths[0] + srcColWidths[1]];
+
+        doc.rect(leftMargin, py, contentWidth, 20).fill(COLOR_PRIMARY);
+        doc.fontSize(9).fillColor('#FFFFFF');
+        doc.text('Source', srcColX[0] + 4, py + 5, { width: srcColWidths[0] - 8, lineBreak: false });
+        doc.text('Price', srcColX[1] + 4, py + 5, { width: srcColWidths[1] - 8, lineBreak: false });
+        doc.text('Description', srcColX[2] + 4, py + 5, { width: srcColWidths[2] - 8, lineBreak: false });
+        py += 20;
+
+        const srcRowHeight = 18;
+        for (let i = 0; i < ai.sources.length; i++) {
+          const src = ai.sources[i];
+
+          if (i % 2 === 1) {
+            doc.rect(leftMargin, py, contentWidth, srcRowHeight).fill('#F9F9F9');
+          }
+          doc.rect(leftMargin, py, contentWidth, srcRowHeight).stroke('#E0E0E0');
+
+          doc.font('Helvetica').fontSize(9).fillColor(COLOR_DARK);
+          doc.text(truncate(src.source, 25), srcColX[0] + 4, py + 4, { width: srcColWidths[0] - 8, lineBreak: false });
+          doc.font('Helvetica-Bold');
+          doc.text(
+            `$${src.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            srcColX[1] + 4, py + 4, { width: srcColWidths[1] - 8, lineBreak: false }
+          );
+          doc.font('Helvetica');
+          doc.text(truncate(src.description, 50), srcColX[2] + 4, py + 4, { width: srcColWidths[2] - 8, lineBreak: false });
+          py += srcRowHeight;
+        }
+      }
+
+      // Footer note
+      const pricingNote = `Comparable pricing data retrieved ${ai.lastUpdated ? new Date(ai.lastUpdated).toLocaleDateString() : 'N/A'}. Prices reflect market averages and may vary based on project specifics, site conditions, and material availability.`;
+      doc.fontSize(7).fillColor(COLOR_GRAY);
+      doc.text(pricingNote, leftMargin, pageHeight - 40, { width: contentWidth });
+    }
 
     doc.end();
   });
