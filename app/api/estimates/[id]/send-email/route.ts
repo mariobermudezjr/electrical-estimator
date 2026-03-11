@@ -26,16 +26,22 @@ export async function POST(
     const text = formData.get('text') as string;
     const filename = formData.get('filename') as string;
 
-    if (!pdfFile || !to || !subject) {
+    if (!to || !subject) {
       return NextResponse.json(
-        { error: 'Missing required fields: pdf, to, subject' },
+        { error: 'Missing required fields: to, subject' },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer
-    const pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-    console.log('[send-email] PDF size:', pdfBuffer.length, 'bytes, to:', to, 'subject:', subject?.slice(0, 50));
+    // Convert file to buffer if provided
+    let pdfBuffer: Buffer | null = null;
+    if (pdfFile) {
+      pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
+      console.log('[send-email] PDF size:', pdfBuffer.length, 'bytes');
+    } else {
+      console.log('[send-email] No PDF attachment (too large for payload limit)');
+    }
+    console.log('[send-email] to:', to, 'subject:', subject?.slice(0, 50));
 
     await connectDB();
 
@@ -49,10 +55,12 @@ export async function POST(
         subject,
         html,
         text,
-        attachments: [{
-          filename: filename || 'estimate.pdf',
-          content: pdfBuffer,
-        }],
+        ...(pdfBuffer ? {
+          attachments: [{
+            filename: filename || 'estimate.pdf',
+            content: pdfBuffer,
+          }],
+        } : {}),
       });
       console.log('[send-email] Resend success, id:', result?.id);
     } catch (sendErr) {
@@ -74,12 +82,12 @@ export async function POST(
         subject,
         html,
         text,
-        attachments: [{
+        attachments: pdfBuffer ? [{
           filename: filename || 'estimate.pdf',
           originalName: filename || 'estimate.pdf',
           mimeType: 'application/pdf',
           size: pdfBuffer.length,
-        }],
+        }] : [],
         estimateId,
         resendId: result?.id,
         sentAt: new Date(),

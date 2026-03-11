@@ -205,23 +205,9 @@ export default function EstimateViewPage() {
 
     setSendingEmail(true);
     try {
-      // Generate the estimate PDF
-      let receiptDataUrls: string[] = [];
-      if (receipts.length > 0) {
-        const results = await Promise.all(
-          receipts.map(async (r) => {
-            const res = await fetch(`/api/estimates/${estimate.id}/receipts/${r.filename}`);
-            if (res.ok) {
-              const { data } = await res.json();
-              return data as string;
-            }
-            return null;
-          })
-        );
-        receiptDataUrls = results.filter((r): r is string => r !== null);
-      }
+      // Generate a lightweight PDF (no receipt images) to stay under Vercel's 4.5MB payload limit
       const logoDataUrl = await loadImageAsDataUrl('/charlies-electric-logo-white.png').catch(() => undefined);
-      const blob = await generateEstimatePDF(estimate, settings, receiptDataUrls, logoDataUrl);
+      const blob = await generateEstimatePDF(estimate, settings, [], logoDataUrl);
 
       const location = `${estimate.projectAddress}, ${estimate.city}${estimate.state ? `, ${estimate.state}` : ''}`;
       const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimate.id}.pdf`;
@@ -242,14 +228,18 @@ export default function EstimateViewPage() {
       const text = `Hi ${estimate.clientName},\n\nThank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at ${location}.\n\nScope of Work:\n${estimate.scopeOfWork}\n\nEstimate Total: $${estimate.pricing.total.toFixed(2)}\n\nThis estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.\n\nBest regards,\nMario Bermudez Jr.\nCharlie's Electric\n562.500.3126`;
 
       // Send via FormData to avoid JSON body size limits
+      // Vercel serverless functions have a 4.5MB request body limit
       const formData = new FormData();
-      formData.append('pdf', blob, filename);
+      if (blob.size < 3_500_000) {
+        formData.append('pdf', blob, filename);
+        formData.append('filename', filename);
+      }
+      // If PDF is too large, send email without attachment (body still has all details)
       formData.append('to', estimate.clientEmail);
       formData.append('clientName', estimate.clientName);
       formData.append('subject', subject);
       formData.append('html', html);
       formData.append('text', text);
-      formData.append('filename', filename);
 
       const sendRes = await fetch(`/api/estimates/${estimate.id}/send-email`, {
         method: 'POST',
