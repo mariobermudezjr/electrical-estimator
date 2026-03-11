@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/pricing/formatters';
-import { Plus, Settings, FileText, Receipt, Users, Mail } from 'lucide-react';
+import { Plus, Settings, FileText, Receipt, Users, Mail, CalendarDays } from 'lucide-react';
 import { generateInvoicePDF, downloadPDF, loadImageAsDataUrl } from '@/lib/export/pdf-service';
 import { useSettingsStore } from '@/lib/stores/settings-store';
 import { LoadingSkeleton } from '@/components/ui/loading-skeleton';
@@ -71,6 +71,12 @@ export default function DashboardPage() {
               <Button variant="outline" size="default">
                 <Mail className="w-4 h-4 mr-2" />
                 Mail
+              </Button>
+            </Link>
+            <Link href="/calendar">
+              <Button variant="outline" size="default">
+                <CalendarDays className="w-4 h-4 mr-2" />
+                Calendar
               </Button>
             </Link>
             <Link href="/clients">

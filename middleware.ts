@@ -11,7 +11,7 @@ export default async function middleware(req: NextRequest) {
   const isAuthenticated = !!session;
 
   // Public paths that don't require authentication
-  const publicPaths = ['/auth/signin', '/auth/verify-request'];
+  const publicPaths = ['/auth/signin', '/auth/verify-request', '/api/calendar/reminders'];
   const isPublicPath = publicPaths.some(path => nextUrl.pathname.startsWith(path));
 
   // If not authenticated and trying to access protected route, redirect to signin
@@ -45,5 +45,7 @@ export const config = {
     '/email',
     '/api/email/:path*',
     '/api/outbound-email/:path*',
+    '/calendar',
+    '/api/calendar/:path*',
   ],
 };
