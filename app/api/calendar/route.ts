@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Send confirmation email to client (and CC owner)
     if (body.clientEmail) {
       try {
-        const dateStr = new Date(body.scheduledDate).toLocaleDateString('en-US', {
+        const dateStr = job.scheduledDate.toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
           month: 'long',

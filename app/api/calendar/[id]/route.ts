@@ -80,7 +80,7 @@ export async function PATCH(
           year: 'numeric',
           month: 'long',
           day: 'numeric',
-          timeZone: 'UTC',
+          timeZone: 'America/Los_Angeles',
         });
 
         await sendEmail({
