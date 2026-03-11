@@ -1,66 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db/mongodb';
+import Estimate from '@/lib/db/models/Estimate';
+import Settings from '@/lib/db/models/Settings';
 import OutboundEmail from '@/lib/db/models/OutboundEmail';
 import { getAuthenticatedUser } from '@/lib/auth/get-user';
 import { sendEmail } from '@/lib/email/outbound';
+import { generateEstimatePDFServer } from '@/lib/export/pdf-server';
+import { defaultSettings } from '@/types/settings';
 
 const OWNER_EMAIL = 'mbermudez91@gmail.com';
 const FROM_EMAIL = process.env.OUTBOUND_FROM_EMAIL || 'estimates@charlieselectric.online';
 
 // POST /api/estimates/[id]/send-email
-// Accepts FormData with PDF file + email metadata, sends via Resend
+// Generates PDF server-side and sends via Resend — no client upload needed
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const userId = await getAuthenticatedUser();
     const { id: estimateId } = await params;
 
-    const formData = await request.formData();
-    const pdfFile = formData.get('pdf') as File | null;
-    const to = formData.get('to') as string;
-    const clientName = formData.get('clientName') as string;
-    const subject = formData.get('subject') as string;
-    const html = formData.get('html') as string;
-    const text = formData.get('text') as string;
-    const filename = formData.get('filename') as string;
-
-    if (!to || !subject) {
-      return NextResponse.json(
-        { error: 'Missing required fields: to, subject' },
-        { status: 400 }
-      );
-    }
-
-    // Convert file to buffer if provided
-    let pdfBuffer: Buffer | null = null;
-    if (pdfFile) {
-      pdfBuffer = Buffer.from(await pdfFile.arrayBuffer());
-      console.log('[send-email] PDF size:', pdfBuffer.length, 'bytes');
-    } else {
-      console.log('[send-email] No PDF attachment (too large for payload limit)');
-    }
-    console.log('[send-email] to:', to, 'subject:', subject?.slice(0, 50));
-
     await connectDB();
+
+    // Fetch estimate from DB
+    const estimate = await Estimate.findOne({ _id: estimateId, userId });
+    if (!estimate) {
+      return NextResponse.json({ error: 'Estimate not found' }, { status: 404 });
+    }
+
+    if (!estimate.clientEmail) {
+      return NextResponse.json({ error: 'No client email on this estimate' }, { status: 400 });
+    }
+
+    // Fetch company settings
+    const settingsDoc = await Settings.findOne({ userId }).lean();
+    const companyInfo = settingsDoc
+      ? {
+          companyName: settingsDoc.companyName || defaultSettings.companyName,
+          companyEmail: settingsDoc.companyEmail,
+          companyPhone: settingsDoc.companyPhone,
+          companyAddress: settingsDoc.companyAddress,
+          defaultHourlyRate: settingsDoc.defaultHourlyRate ?? defaultSettings.defaultHourlyRate,
+          defaultMarkupPercentage: settingsDoc.defaultMarkupPercentage ?? defaultSettings.defaultMarkupPercentage,
+          preferredAIProvider: settingsDoc.preferredAIProvider || defaultSettings.preferredAIProvider,
+          theme: settingsDoc.theme || defaultSettings.theme,
+        }
+      : defaultSettings;
+
+    // Generate PDF server-side
+    const estimateData = { ...estimate.toJSON(), id: estimateId };
+    console.log('[send-email] Generating PDF server-side for estimate:', estimateId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pdfBuffer = await generateEstimatePDFServer(estimateData as any, companyInfo);
+    console.log('[send-email] PDF generated:', pdfBuffer.length, 'bytes');
+
+    const location = `${estimate.projectAddress}, ${estimate.city}${estimate.state ? `, ${estimate.state}` : ''}`;
+    const filename = `estimate-${estimate.clientName.replace(/\s+/g, '-')}-${estimateId}.pdf`;
+    const subject = `Estimate for ${estimate.scopeOfWork.slice(0, 60)} — ${location}`;
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px;">
+        <h2 style="color: #333;">Estimate from Charlie's Electric</h2>
+        <p>Hi ${estimate.clientName},</p>
+        <p>Thank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at <strong>${location}</strong>.</p>
+        <h3 style="color: #555;">Scope of Work</h3>
+        <p>${estimate.scopeOfWork.replace(/\n/g, '<br/>')}</p>
+        <h3 style="color: #555;">Estimate Total: $${estimate.pricing.total.toFixed(2)}</h3>
+        <p>This estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.</p>
+        <p>Best regards,<br/>Mario Bermudez Jr.<br/>Charlie's Electric<br/>562.500.3126</p>
+      </div>
+    `;
+
+    const text = `Hi ${estimate.clientName},\n\nThank you for reaching out to Charlie's Electric. Please find attached your estimate for the work at ${location}.\n\nScope of Work:\n${estimate.scopeOfWork}\n\nEstimate Total: $${estimate.pricing.total.toFixed(2)}\n\nThis estimate is valid for 30 days. If you have any questions or would like to schedule the work, please don't hesitate to reach out.\n\nBest regards,\nMario Bermudez Jr.\nCharlie's Electric\n562.500.3126`;
 
     // Send via Resend
     let result;
     try {
       result = await sendEmail({
         from: FROM_EMAIL,
-        to: [to],
+        to: [estimate.clientEmail],
         bcc: [OWNER_EMAIL],
         subject,
         html,
         text,
-        ...(pdfBuffer ? {
-          attachments: [{
-            filename: filename || 'estimate.pdf',
-            content: pdfBuffer,
-          }],
-        } : {}),
+        attachments: [{
+          filename,
+          content: pdfBuffer,
+        }],
       });
       console.log('[send-email] Resend success, id:', result?.id);
     } catch (sendErr) {
@@ -71,31 +98,34 @@ export async function POST(
       );
     }
 
-    // Save a record in OutboundEmail
+    // Save record in OutboundEmail (without attachment data)
     try {
       await OutboundEmail.create({
         userId,
         folder: 'sent',
         from: FROM_EMAIL,
-        to: [to],
+        to: [estimate.clientEmail],
         bcc: [OWNER_EMAIL],
         subject,
         html,
         text,
-        attachments: pdfBuffer ? [{
-          filename: filename || 'estimate.pdf',
-          originalName: filename || 'estimate.pdf',
+        attachments: [{
+          filename,
+          originalName: filename,
           mimeType: 'application/pdf',
           size: pdfBuffer.length,
-        }] : [],
+        }],
         estimateId,
         resendId: result?.id,
         sentAt: new Date(),
       });
     } catch (dbErr) {
       console.error('[send-email] DB save error (email was sent):', dbErr);
-      // Email was sent successfully, just failed to save record — don't fail the request
     }
+
+    // Update estimate status to sent
+    estimate.status = 'sent';
+    await estimate.save();
 
     return NextResponse.json({ success: true, resendId: result?.id });
   } catch (error) {
