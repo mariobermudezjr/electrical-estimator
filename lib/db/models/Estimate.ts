@@ -129,7 +129,8 @@ const EstimateSchema = new Schema<IEstimate>(
     notes: { type: String },
     noteImages: [ReceiptImageSchema],
     receipts: [ReceiptImageSchema],
-    payments: [PaymentSchema]
+    payments: [PaymentSchema],
+    clientProvidedMaterials: { type: Boolean, default: false }
   },
   {
     timestamps: true,

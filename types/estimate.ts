@@ -90,6 +90,7 @@ export interface Estimate {
   noteImages?: ReceiptImage[];
   receipts?: ReceiptImage[];
   payments?: Payment[];
+  clientProvidedMaterials?: boolean;
 }
 
 // Serializable version for local storage

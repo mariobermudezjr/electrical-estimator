@@ -21,6 +21,7 @@ import { HomeDepotImport } from '@/components/estimates/HomeDepotImport';
 import { TemplateSelector } from '@/components/templates/TemplateSelector';
 import { ScopeTemplate } from '@/types/template';
 import { ClientPicker } from '@/components/clients/ClientPicker';
+import { PreviousAddressPicker } from '@/components/estimates/PreviousAddressPicker';
 
 export default function NewEstimatePage() {
   const router = useRouter();
@@ -45,6 +46,7 @@ export default function NewEstimatePage() {
     quantity: number;
     unitCost: number;
   }>>([]);
+  const [clientProvidedMaterials, setClientProvidedMaterials] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
   // Update defaults when settings change
@@ -59,6 +61,7 @@ export default function NewEstimatePage() {
     hourlyRate,
     materialItems: materials,
     markupPercentage,
+    clientProvidedMaterials,
   });
 
   const addMaterial = () => {
@@ -112,6 +115,7 @@ export default function NewEstimatePage() {
       scopeOfWork,
       pricing,
       status: 'draft' as const,
+      clientProvidedMaterials: clientProvidedMaterials || undefined,
     };
 
     try {
@@ -200,6 +204,16 @@ export default function NewEstimatePage() {
                     className="mt-1.5"
                     required
                   />
+                  <div className="mt-2">
+                    <PreviousAddressPicker
+                      clientId={selectedClientId}
+                      onSelect={(addr) => {
+                        setProjectAddress(addr.projectAddress);
+                        setCity(addr.city);
+                        setState(addr.state);
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -321,15 +335,33 @@ export default function NewEstimatePage() {
               </CardContent>
             </Card>
 
+            {/* Client Provided Materials Toggle */}
+            <div className="flex items-center gap-3 px-1">
+              <input
+                id="clientProvidedMaterials"
+                type="checkbox"
+                checked={clientProvidedMaterials}
+                onChange={(e) => setClientProvidedMaterials(e.target.checked)}
+                className="h-4 w-4 rounded border-border-primary text-accent-primary focus:ring-accent-primary"
+              />
+              <Label htmlFor="clientProvidedMaterials" className="cursor-pointer">
+                Client will provide all materials (labor only estimate)
+              </Label>
+            </div>
+
             {/* Materials */}
-            <Card>
+            <Card className={clientProvidedMaterials ? 'opacity-50' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Materials</CardTitle>
-                    <CardDescription>Add materials and supplies</CardDescription>
+                    <CardDescription>
+                      {clientProvidedMaterials
+                        ? 'Materials excluded — client providing all materials'
+                        : 'Add materials and supplies'}
+                    </CardDescription>
                   </div>
-                  <Button onClick={addMaterial} variant="outline" size="sm">
+                  <Button onClick={addMaterial} variant="outline" size="sm" disabled={clientProvidedMaterials}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Material
                   </Button>
@@ -432,8 +464,10 @@ export default function NewEstimatePage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-text-secondary">Materials</span>
-                      <span className="font-medium text-text-primary">
+                      <span className="text-text-secondary">
+                        Materials{clientProvidedMaterials ? ' (client provided)' : ''}
+                      </span>
+                      <span className={`font-medium ${clientProvidedMaterials ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>
                         {formatCurrency(pricing.materials.subtotal)}
                       </span>
                     </div>

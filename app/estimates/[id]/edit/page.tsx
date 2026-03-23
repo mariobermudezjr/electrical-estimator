@@ -18,6 +18,7 @@ import { WorkType } from '@/types/estimate';
 import { ArrowLeft, Plus, Trash2, Save, DollarSign } from 'lucide-react';
 import { AIPricingCard } from '@/components/estimates/AIPricingCard';
 import { ClientPicker } from '@/components/clients/ClientPicker';
+import { PreviousAddressPicker } from '@/components/estimates/PreviousAddressPicker';
 
 export default function EditEstimatePage() {
   const params = useParams();
@@ -45,6 +46,7 @@ export default function EditEstimatePage() {
     quantity: number;
     unitCost: number;
   }>>([]);
+  const [clientProvidedMaterials, setClientProvidedMaterials] = useState(false);
 
   // Load estimate data on mount
   useEffect(() => {
@@ -61,6 +63,8 @@ export default function EditEstimatePage() {
       setLaborHours(estimate.pricing.labor.hours);
       setHourlyRate(estimate.pricing.labor.hourlyRate);
       setMarkupPercentage(estimate.pricing.markupPercentage);
+
+      setClientProvidedMaterials(estimate.clientProvidedMaterials || false);
 
       // Convert line items to materials array
       const materialItems = estimate.pricing.materials.items.map(item => ({
@@ -99,6 +103,7 @@ export default function EditEstimatePage() {
     hourlyRate,
     materialItems: materials,
     markupPercentage,
+    clientProvidedMaterials,
   });
 
   const addMaterial = () => {
@@ -132,6 +137,7 @@ export default function EditEstimatePage() {
       workType,
       scopeOfWork,
       pricing,
+      clientProvidedMaterials: clientProvidedMaterials || undefined,
     };
 
     try {
@@ -221,6 +227,16 @@ export default function EditEstimatePage() {
                     className="mt-1.5"
                     required
                   />
+                  <div className="mt-2">
+                    <PreviousAddressPicker
+                      clientId={selectedClientId}
+                      onSelect={(addr) => {
+                        setProjectAddress(addr.projectAddress);
+                        setCity(addr.city);
+                        setState(addr.state);
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -322,15 +338,33 @@ export default function EditEstimatePage() {
               </CardContent>
             </Card>
 
+            {/* Client Provided Materials Toggle */}
+            <div className="flex items-center gap-3 px-1">
+              <input
+                id="clientProvidedMaterials"
+                type="checkbox"
+                checked={clientProvidedMaterials}
+                onChange={(e) => setClientProvidedMaterials(e.target.checked)}
+                className="h-4 w-4 rounded border-border-primary text-accent-primary focus:ring-accent-primary"
+              />
+              <Label htmlFor="clientProvidedMaterials" className="cursor-pointer">
+                Client will provide all materials (labor only estimate)
+              </Label>
+            </div>
+
             {/* Materials */}
-            <Card>
+            <Card className={clientProvidedMaterials ? 'opacity-50' : ''}>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>Materials</CardTitle>
-                    <CardDescription>Update materials and supplies</CardDescription>
+                    <CardDescription>
+                      {clientProvidedMaterials
+                        ? 'Materials excluded — client providing all materials'
+                        : 'Update materials and supplies'}
+                    </CardDescription>
                   </div>
-                  <Button onClick={addMaterial} variant="outline" size="sm">
+                  <Button onClick={addMaterial} variant="outline" size="sm" disabled={clientProvidedMaterials}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Material
                   </Button>
@@ -432,8 +466,10 @@ export default function EditEstimatePage() {
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-text-secondary">Materials</span>
-                      <span className="font-medium text-text-primary">
+                      <span className="text-text-secondary">
+                        Materials{clientProvidedMaterials ? ' (client provided)' : ''}
+                      </span>
+                      <span className={`font-medium ${clientProvidedMaterials ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>
                         {formatCurrency(pricing.materials.subtotal)}
                       </span>
                     </div>

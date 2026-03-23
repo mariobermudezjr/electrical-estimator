@@ -228,6 +228,13 @@ export async function generateEstimatePDF(
   // Pricing table
   const startY = billOfQuantityY + 8;
 
+  // Client provided materials note
+  if (estimate.clientProvidedMaterials) {
+    doc.setFontSize(10);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('* Labor Only — Client providing all materials', leftMargin, startY - 2);
+  }
+
   // Labor row
   const tableData: any[] = [
     [
@@ -238,15 +245,17 @@ export async function generateEstimatePDF(
     ],
   ];
 
-  // Material rows
-  estimate.pricing.materials.items.forEach((item) => {
-    tableData.push([
-      item.description || 'Material',
-      item.quantity.toString(),
-      `$${item.unitCost.toFixed(2)}`,
-      `$${item.total.toFixed(2)}`,
-    ]);
-  });
+  // Material rows (skip if client-provided)
+  if (!estimate.clientProvidedMaterials) {
+    estimate.pricing.materials.items.forEach((item) => {
+      tableData.push([
+        item.description || 'Material',
+        item.quantity.toString(),
+        `$${item.unitCost.toFixed(2)}`,
+        `$${item.total.toFixed(2)}`,
+      ]);
+    });
+  }
 
   // Summary rows
   tableData.push(['', '', 'Subtotal:', `$${estimate.pricing.subtotal.toFixed(2)}`]);
@@ -254,7 +263,7 @@ export async function generateEstimatePDF(
   tableData.push(['', '', 'TOTAL:', `$${estimate.pricing.total.toFixed(2)}`]);
 
   autoTable(doc, {
-    startY,
+    startY: estimate.clientProvidedMaterials ? startY + 4 : startY,
     margin: { left: leftMargin, right: rightMargin },
     head: [['Description', 'Quantity', 'Rate', 'Amount']],
     body: tableData,
@@ -410,6 +419,13 @@ export async function generateInvoicePDF(
   // Pricing table
   const startY = billOfQuantityY + 8;
 
+  // Client provided materials note
+  if (estimate.clientProvidedMaterials) {
+    doc.setFontSize(10);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('* Labor Only — Client providing all materials', leftMargin, startY - 2);
+  }
+
   // Labor row
   const tableData: any[] = [
     [
@@ -420,15 +436,17 @@ export async function generateInvoicePDF(
     ],
   ];
 
-  // Material rows
-  estimate.pricing.materials.items.forEach((item) => {
-    tableData.push([
-      item.description || 'Material',
-      item.quantity.toString(),
-      `$${item.unitCost.toFixed(2)}`,
-      `$${item.total.toFixed(2)}`,
-    ]);
-  });
+  // Material rows (skip if client-provided)
+  if (!estimate.clientProvidedMaterials) {
+    estimate.pricing.materials.items.forEach((item) => {
+      tableData.push([
+        item.description || 'Material',
+        item.quantity.toString(),
+        `$${item.unitCost.toFixed(2)}`,
+        `$${item.total.toFixed(2)}`,
+      ]);
+    });
+  }
 
   // Summary rows
   tableData.push(['', '', 'Subtotal:', `$${estimate.pricing.subtotal.toFixed(2)}`]);
@@ -436,7 +454,7 @@ export async function generateInvoicePDF(
   tableData.push(['', '', 'TOTAL:', `$${estimate.pricing.total.toFixed(2)}`]);
 
   autoTable(doc, {
-    startY,
+    startY: estimate.clientProvidedMaterials ? startY + 4 : startY,
     margin: { left: leftMargin, right: rightMargin },
     head: [['Description', 'Quantity', 'Rate', 'Amount']],
     body: tableData,

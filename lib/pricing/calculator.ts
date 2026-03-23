@@ -17,8 +17,10 @@ export function calculateEstimate(input: CalculationInput): PricingBreakdown {
 
   const materialsSubtotal = materialItems.reduce((sum, item) => sum + item.total, 0);
 
-  // Calculate subtotal before markup
-  const subtotal = laborTotal + materialsSubtotal;
+  // Calculate subtotal before markup (exclude materials if client-provided)
+  const subtotal = input.clientProvidedMaterials
+    ? laborTotal
+    : laborTotal + materialsSubtotal;
 
   // Calculate markup
   const markupAmount = subtotal * (input.markupPercentage / 100);
@@ -48,11 +50,14 @@ export function recalculatePricing(
   laborHours: number,
   hourlyRate: number,
   materials: LineItem[],
-  markupPercentage: number
+  markupPercentage: number,
+  clientProvidedMaterials?: boolean
 ): PricingBreakdown {
   const laborTotal = laborHours * hourlyRate;
   const materialsSubtotal = materials.reduce((sum, item) => sum + item.total, 0);
-  const subtotal = laborTotal + materialsSubtotal;
+  const subtotal = clientProvidedMaterials
+    ? laborTotal
+    : laborTotal + materialsSubtotal;
   const markupAmount = subtotal * (markupPercentage / 100);
   const total = subtotal + markupAmount;
 

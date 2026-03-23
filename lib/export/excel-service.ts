@@ -35,16 +35,20 @@ export function generateEstimateExcel(estimate: Estimate): Blob {
     ],
   ];
 
-  // Add material rows
-  estimate.pricing.materials.items.forEach((item) => {
-    summaryData.push([
-      'Material',
-      item.description || 'Material',
-      item.quantity,
-      item.unitCost,
-      item.total,
-    ]);
-  });
+  // Add material rows (skip if client-provided)
+  if (estimate.clientProvidedMaterials) {
+    summaryData.push(['', '* Client providing all materials', '', '', '']);
+  } else {
+    estimate.pricing.materials.items.forEach((item) => {
+      summaryData.push([
+        'Material',
+        item.description || 'Material',
+        item.quantity,
+        item.unitCost,
+        item.total,
+      ]);
+    });
+  }
 
   // Add summary rows
   summaryData.push(
@@ -145,16 +149,20 @@ export function generateInvoiceExcel(estimate: Estimate): Blob {
     ],
   ];
 
-  // Add material rows
-  estimate.pricing.materials.items.forEach((item) => {
-    summaryData.push([
-      'Material',
-      item.description || 'Material',
-      item.quantity,
-      item.unitCost,
-      item.total,
-    ]);
-  });
+  // Add material rows (skip if client-provided)
+  if (estimate.clientProvidedMaterials) {
+    summaryData.push(['', '* Client providing all materials', '', '', '']);
+  } else {
+    estimate.pricing.materials.items.forEach((item) => {
+      summaryData.push([
+        'Material',
+        item.description || 'Material',
+        item.quantity,
+        item.unitCost,
+        item.total,
+      ]);
+    });
+  }
 
   // Add summary rows
   summaryData.push(

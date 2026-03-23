@@ -650,6 +650,11 @@ export default function EstimateViewPage() {
               <CardDescription>Detailed cost analysis</CardDescription>
             </CardHeader>
             <CardContent>
+              {estimate.clientProvidedMaterials && (
+                <div className="mb-4 px-3 py-2 bg-accent-primary/10 border border-accent-primary/20 rounded-lg text-sm text-accent-primary font-medium">
+                  Labor Only — Client providing all materials
+                </div>
+              )}
               <h3 className="text-sm font-medium text-text-secondary mb-4">Bill of Quantity</h3>
               {/* Labor */}
               <div className="space-y-4">

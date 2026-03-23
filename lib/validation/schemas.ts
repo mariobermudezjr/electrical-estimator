@@ -76,7 +76,8 @@ export const createEstimateSchema = z.object({
   pricing: pricingBreakdownSchema,
   aiPricing: aiPricingDataSchema,
   status: z.enum(['draft', 'sent', 'approved', 'rejected']).default('draft'),
-  notes: z.string().optional()
+  notes: z.string().optional(),
+  clientProvidedMaterials: z.boolean().optional()
 });
 
 // Update Estimate Schema (all fields optional)

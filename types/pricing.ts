@@ -7,6 +7,7 @@ export interface CalculationInput {
     unitCost: number;
   }>;
   markupPercentage: number;
+  clientProvidedMaterials?: boolean;
 }
 
 export interface MaterialItem {
